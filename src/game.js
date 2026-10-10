@@ -13,7 +13,7 @@ export class GameEngine {
 
     // Levels
     this.levels = createLevels();
-    this.currentLevelIndex = 0; // Starts in Sandbox mode!
+    this.currentLevelIndex = 1; // Defaults to Level 1 (Orbital Jump)!
     this.currentLevel = null;
 
     // Simulation Time
@@ -50,7 +50,7 @@ export class GameEngine {
 
     // Input handlers
     this.setupInputs();
-    this.loadLevel(0); // Load Sandbox first
+    this.loadLevel(1); // Load Level 1 first
 
     // Auto resize
     this.resizeCanvas();

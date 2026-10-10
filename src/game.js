@@ -19,7 +19,7 @@ export class GameEngine {
     // Simulation Time
     this.simTime = 0;
     this.timeScale = 1.0;
-    this.isPaused = false;
+    this.isPaused = true; // Defaults to paused!
     this.fixedDt = 0.02; // 50hz physics step
     this.accumulator = 0;
 
@@ -70,7 +70,7 @@ export class GameEngine {
     this.bodies = levelData.bodies;
     this.waypoint = levelData.waypoint;
     this.simTime = 0;
-    this.isPaused = false;
+    this.isPaused = true;
     this.isAimingBurn = false;
     this.targetHitTime = null;
     this.plannedTrajectory = null;
@@ -94,6 +94,7 @@ export class GameEngine {
     } else {
       this.camera.zoom = 0.62;
     }
+    this.updateZoomDisplay();
 
     this.updateHUD();
     this.computeTrajectory();
@@ -215,6 +216,9 @@ export class GameEngine {
     }
 
     this.simTime += dt;
+    if (this.rocket.state === 'DOCKED' && this.simTime >= 90.0) {
+      this.simTime = this.simTime % 90.0;
+    }
 
     // 2. Update Celestial Bodies along deterministic rails
     for (const body of this.bodies) {
@@ -275,7 +279,7 @@ export class GameEngine {
       return;
     }
 
-    const steps = this.currentLevel.isSandbox ? 1100 : 650;
+    const steps = this.currentLevel.isSandbox ? 1200 : (this.currentLevel.predictionSteps || 1050);
     const dt = 0.08;
 
     if (this.rocket.state === 'DOCKED') {
@@ -846,7 +850,7 @@ export class GameEngine {
     canvas.addEventListener('wheel', (e) => {
       e.preventDefault();
       const zoomFactor = e.deltaY < 0 ? 1.12 : 0.89;
-      this.camera.zoom = Math.max(0.12, Math.min(2.5, this.camera.zoom * zoomFactor));
+      this.setZoom(this.camera.zoom * zoomFactor);
     });
 
     window.addEventListener('keydown', (e) => {
@@ -859,18 +863,34 @@ export class GameEngine {
         } else {
           this.togglePause();
         }
-      } else if (e.code === 'KeyP' || e.code === 'KeyW' || e.code === 'Equal') {
+      } else if (e.code === 'KeyP' || e.code === 'KeyW') {
         if (!e.repeat) {
           this.setTrim('PROGRADE');
         }
-      } else if (e.code === 'KeyO' || e.code === 'KeyS' || e.code === 'Minus') {
+      } else if (e.code === 'KeyO' || e.code === 'KeyS') {
         if (!e.repeat) {
           this.setTrim('RETROGRADE');
         }
+      } else if (e.code === 'KeyC') {
+        this.recenterCamera();
+      } else if (e.code === 'NumpadAdd' || (e.code === 'Equal' && this.rocket.state === 'DOCKED')) {
+        this.zoomIn(1.1);
+      } else if (e.code === 'NumpadSubtract' || (e.code === 'Minus' && this.rocket.state === 'DOCKED')) {
+        this.zoomOut(1.1);
       } else if (e.code === 'Escape') {
-        if (this.isPlacingTarget) {
+        const instModal = document.getElementById('instructions-modal');
+        if (instModal && instModal.classList.contains('active')) {
+          this.closeInstructions();
+        } else if (this.isPlacingTarget) {
           this.isPlacingTarget = false;
           this.updateHUD();
+        }
+      } else if (e.code === 'KeyH') {
+        const instModal = document.getElementById('instructions-modal');
+        if (instModal && instModal.classList.contains('active')) {
+          this.closeInstructions();
+        } else {
+          this.openInstructions();
         }
       } else if (e.code === 'KeyR') {
         this.resetCurrentLevel();
@@ -896,11 +916,37 @@ export class GameEngine {
         if (this.rocket.activeTrim === 'TARGET_BRAKE') {
           this.setTrim(null);
         }
-      } else if (e.code === 'KeyP' || e.code === 'KeyW' || e.code === 'Equal' ||
-          e.code === 'KeyO' || e.code === 'KeyS' || e.code === 'Minus') {
+      } else if (e.code === 'KeyP' || e.code === 'KeyW' ||
+          e.code === 'KeyO' || e.code === 'KeyS') {
         this.setTrim(null);
       }
     });
+  }
+
+  setZoom(zoom) {
+    this.camera.zoom = Math.max(0.12, Math.min(2.5, zoom));
+    this.updateZoomDisplay();
+  }
+
+  zoomIn(factor = 1.15) {
+    this.setZoom(this.camera.zoom * factor);
+  }
+
+  zoomOut(factor = 1.15) {
+    this.setZoom(this.camera.zoom / factor);
+  }
+
+  recenterCamera() {
+    this.camera.x = 0;
+    this.camera.y = 0;
+    this.setZoom(this.currentLevel && this.currentLevel.isSandbox ? 0.52 : (this.currentLevelIndex <= 3 ? 0.88 : (this.currentLevelIndex <= 6 ? 0.75 : 0.62)));
+  }
+
+  updateZoomDisplay() {
+    const zoomLabel = document.getElementById('label-zoom');
+    if (zoomLabel) {
+      zoomLabel.innerText = Math.round(this.camera.zoom * 100) + '%';
+    }
   }
 
   togglePause() {
@@ -908,9 +954,27 @@ export class GameEngine {
     this.updateHUD();
   }
 
+  toggleSweep() {
+    if (this.rocket.state !== 'DOCKED') return;
+    this.isPaused = !this.isPaused;
+    this.updateHUD();
+  }
+
+  openInstructions() {
+    this.isPaused = true;
+    this.updateHUD();
+    const modal = document.getElementById('instructions-modal');
+    if (modal) modal.classList.add('active');
+  }
+
+  closeInstructions() {
+    const modal = document.getElementById('instructions-modal');
+    if (modal) modal.classList.remove('active');
+  }
+
   setTimeScale(scale) {
     this.timeScale = scale;
-    if (this.isPaused && scale > 0) {
+    if (this.rocket.state === 'FLYING' && this.isPaused && scale > 0) {
       this.isPaused = false;
     }
     this.updateHUD();
@@ -1082,20 +1146,37 @@ export class GameEngine {
     const scrubLabel = document.getElementById('label-scrub-time');
     const prevScrubBtn = document.getElementById('btn-scrub-prev');
     const nextScrubBtn = document.getElementById('btn-scrub-next');
+    const sweepBtn = document.getElementById('btn-scrub-sweep');
+
     if (scrubSlider && scrubLabel) {
       if (this.rocket.state === 'FLYING') {
         scrubSlider.disabled = true;
         if (prevScrubBtn) prevScrubBtn.disabled = true;
         if (nextScrubBtn) nextScrubBtn.disabled = true;
+        if (sweepBtn) {
+          sweepBtn.disabled = true;
+          sweepBtn.innerText = '▶ SWEEP';
+          sweepBtn.classList.remove('sweeping');
+        }
         scrubSlider.value = this.simTime.toFixed(1);
         scrubLabel.innerText = `T+${this.simTime.toFixed(1)}s (FLIGHT)`;
       } else {
         scrubSlider.disabled = false;
         if (prevScrubBtn) prevScrubBtn.disabled = false;
         if (nextScrubBtn) nextScrubBtn.disabled = false;
-        if (!this.isPaused) {
-          scrubSlider.value = this.simTime.toFixed(1);
+        if (sweepBtn) {
+          sweepBtn.disabled = false;
+          if (this.isPaused) {
+            sweepBtn.innerText = '▶ SWEEP';
+            sweepBtn.classList.remove('sweeping');
+            sweepBtn.title = 'Run automated scrub sweep [SPACE]';
+          } else {
+            sweepBtn.innerText = '❚❚ PAUSE';
+            sweepBtn.classList.add('sweeping');
+            sweepBtn.title = 'Pause automated sweep [SPACE]';
+          }
         }
+        scrubSlider.value = this.simTime.toFixed(1);
         scrubLabel.innerText = `T+${this.simTime.toFixed(1)}s (AIM)`;
       }
     }
@@ -1116,7 +1197,11 @@ export class GameEngine {
 
     const pauseBtn = document.getElementById('btn-pause');
     if (pauseBtn) {
-      pauseBtn.innerText = this.isPaused ? '▶ RESUME' : '❚❚ PAUSE';
+      if (this.rocket.state === 'DOCKED') {
+        pauseBtn.innerText = this.isPaused ? '▶ SWEEP' : '❚❚ PAUSE';
+      } else {
+        pauseBtn.innerText = this.isPaused ? '▶ RESUME' : '❚❚ PAUSE';
+      }
       pauseBtn.classList.toggle('active', this.isPaused);
     }
 
@@ -1154,5 +1239,7 @@ export class GameEngine {
     if (launchBtn) {
       launchBtn.disabled = this.rocket.state !== 'DOCKED';
     }
+
+    this.updateZoomDisplay();
   }
 }

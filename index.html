@@ -46,8 +46,9 @@
         <button class="lvl-nav-btn" id="btn-next-lvl" title="Next Mission [E]">▶</button>
       </div>
 
-      <!-- Time Controls -->
+      <!-- Time Controls & Manual -->
       <div class="time-bar">
+        <button class="manual-btn" id="btn-open-manual" title="Flight Operations Manual [H]">📖 MANUAL [H]</button>
         <span class="clock-display" id="telemetry-time">T+00.0s</span>
         <button class="time-btn" id="btn-pause">❚❚ PAUSE</button>
         <button class="time-btn" data-speed="0.5">0.5×</button>
@@ -190,8 +191,8 @@
 
     <!-- Bottom Launch Control Console -->
     <footer class="bottom-console interactive">
-      <!-- Launch Time Window Scrubber with Fine-Step Arrows -->
-      <div class="slider-group" style="min-width: 270px;">
+      <!-- Launch Time Window Scrubber with Fine-Step Arrows & Auto-Sweep -->
+      <div class="slider-group" style="min-width: 330px;">
         <div class="slider-header">
           <span>LAUNCH WINDOW (SCRUBBER)</span>
           <span id="label-scrub-time">T+0.0s (AIM)</span>
@@ -200,6 +201,7 @@
           <button class="step-btn" id="btn-scrub-prev" title="Step Back 0.1s [◀ / A]">◀</button>
           <input type="range" id="input-scrub-time" min="0" max="90" value="0" step="0.1">
           <button class="step-btn" id="btn-scrub-next" title="Step Forward 0.1s [▶ / D]">▶</button>
+          <button class="sweep-btn" id="btn-scrub-sweep" title="Toggle Auto-Sweep [SPACE]">▶ SWEEP</button>
         </div>
       </div>
 
@@ -219,9 +221,16 @@
       <!-- Main Launch Button -->
       <button class="launch-btn" id="btn-launch">LAUNCH ROCKET [L]</button>
 
-      <!-- Mission Reset & Camera Reset -->
+      <!-- Mission Reset & Camera Controls -->
       <button class="reset-btn" id="btn-reset">RESET [R]</button>
-      <button class="reset-btn" id="btn-recenter">CENTER CAM</button>
+
+      <!-- Precision Zoom & Camera Cluster -->
+      <div class="cam-cluster">
+        <button class="step-btn" id="btn-zoom-out" title="Precision Zoom Out [－ / -]">－</button>
+        <span class="zoom-display" id="label-zoom" title="Current Zoom Level">60%</span>
+        <button class="step-btn" id="btn-zoom-in" title="Precision Zoom In [＋ / +]">＋</button>
+        <button class="reset-btn" id="btn-recenter" title="Recenter Camera [C]" style="padding: 4px 8px; font-size: 0.7rem;">CENTER</button>
+      </div>
     </footer>
   </div>
 
@@ -235,6 +244,122 @@
       <div class="modal-actions">
         <button class="modal-btn secondary" id="modal-retry-btn">REPLAY</button>
         <button class="modal-btn primary" id="modal-next-btn">NEXT LEVEL ▶</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- In-Game Instructions Modal Overlay (Pops up on initial open) -->
+  <div class="modal-overlay active" id="instructions-modal">
+    <div class="modal-content instructions-modal-card">
+      <div class="modal-header">
+        <div class="modal-header-brand">
+          <span class="manual-icon">🚀</span>
+          <div>
+            <h2 class="instructions-title">FLIGHT OPERATIONS MANUAL</h2>
+            <span class="instructions-subtitle">ORBITAL PUZZLE // FLIGHT CREW BRIEFING & PROCEDURES</span>
+          </div>
+        </div>
+        <button class="modal-close-btn" id="btn-close-instructions-x" title="Close Manual [ESC]">✕</button>
+      </div>
+
+      <div class="instructions-body">
+        <!-- Section: Primary Objective -->
+        <div class="instructions-section">
+          <div class="section-tag">PRIMARY OBJECTIVE</div>
+          <p>
+            Launch your spacecraft from rotating planetary surfaces, exploit orbital momentum, execute gravitational slingshots (flybys), and rendezvous with target orbital waypoints (stations, beacons, and gates) across the solar system.
+          </p>
+        </div>
+
+        <!-- Section: Interactive Demo / Auto-Dial -->
+        <div class="instructions-section" style="border-color: rgba(251, 191, 36, 0.45); background: rgba(251, 191, 36, 0.08);">
+          <div class="section-tag" style="color: #fbbf24;">⚡ WANT A DEMO? (EXAMPLE SOLUTIONS)</div>
+          <p>
+            To see any mission solved live, open the <strong>FLIGHT ADVISORY</strong> panel on the right side of the screen: click <strong>SHOW HINT</strong>, then click <strong>AUTO-DIAL SOLUTION ⚡</strong>. This automatically dials in the verified launch window and booster thrust. Then hit <strong>LAUNCH ROCKET [L]</strong> (or <strong>▶ SWEEP</strong>) to run the simulation demo!
+          </p>
+        </div>
+
+        <!-- Section: 3-Step Procedure -->
+        <div class="instructions-section">
+          <div class="section-tag">THE 3-STEP LAUNCH WORKFLOW</div>
+          <div class="guide-steps">
+            <div class="guide-step">
+              <div class="step-num">1</div>
+              <div class="step-info">
+                <strong>Launch Window Timing (Scrubber)</strong>
+                <p>Planetary axial rotation gives your rocket a powerful tangential velocity boost (<span class="code-hl">v_surface_spin</span>). Use the Launch Window scrubber at the bottom to rotate your launch pad toward the ejection corridor. The system starts <strong>paused</strong>—step manually with <kbd>◀</kbd> / <kbd>▶</kbd> (or <kbd>A</kbd> / <kbd>D</kbd>), or click <span class="code-hl">▶ SWEEP</span> / <kbd>SPACE</kbd> to run the sweep automatically.</p>
+              </div>
+            </div>
+
+            <div class="guide-step">
+              <div class="step-num">2</div>
+              <div class="step-info">
+                <strong>Booster Impulse Configuration</strong>
+                <p>Dial your engine thrust (<span class="code-hl">10 to 65 m/s</span>) using the step buttons or thrust slider. Combined with planetary spin and parent orbital motion, this determines your ejection vector.</p>
+              </div>
+            </div>
+
+            <div class="guide-step">
+              <div class="step-num">3</div>
+              <div class="step-info">
+                <strong>Trajectory Analysis & Slingshots</strong>
+                <p>Analyze the predictive trajectory path before ignition:
+                  <ul>
+                    <li><strong style="color: #38bdf8;">Chrono Time Pips (+5s, +10s, +15s):</strong> Visual rulers on both your flight path and target orbit to align rendezvous timing at a glance.</li>
+                    <li><strong style="color: #fbbf24;">Arrival Node Ghost:</strong> Hologram at closest approach displaying intercept distance and relative velocity (<span class="code-hl">Δv_rel</span>).</li>
+                  </ul>
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Section: Rendezvous & Docking -->
+        <div class="instructions-section">
+          <div class="section-tag">RENDEZVOUS & DOCKING</div>
+          <div class="guide-grid">
+            <div class="guide-card">
+              <strong style="color: #34d399;">★ Passive Clamp Capture</strong>
+              <p>Entering the target waypoint's Sphere of Influence (green pulsing ring) with relative speed at or below the capture limit automatically locks docking clamps.</p>
+            </div>
+            <div class="guide-card">
+              <strong style="color: #fbbf24;">⚡ Target-Relative Braking</strong>
+              <p>Arriving inside the SOI with excess speed? Hold <kbd>SPACE</kbd> or <kbd>S</kbd> inside the SOI to fire RCS thrusters directly opposing your relative drift until capture velocity is reached.</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Section: Mid-flight Trim -->
+        <div class="instructions-section">
+          <div class="section-tag">MID-FLIGHT RCS TRIM</div>
+          <p>
+            Fine-tune your flight path in active flight: hold <kbd>W</kbd> / <kbd>P</kbd> for <strong>Prograde Trim</strong> (accelerate forward to expand orbit) or hold <kbd>S</kbd> / <kbd>O</kbd> for <strong>Retrograde Trim</strong> (burn backward to drop orbit).
+          </p>
+        </div>
+
+        <!-- Section: Keyboard Cheatsheet -->
+        <div class="instructions-section">
+          <div class="section-tag">CONTROLS CHEATSHEET</div>
+          <div class="kbd-table">
+            <div class="kbd-row"><span class="kbd-key"><kbd>L</kbd></span><span>Launch Rocket from Pad</span></div>
+            <div class="kbd-row"><span class="kbd-key"><kbd>SPACE</kbd></span><span>Toggle Sweep (Docked) · Target Brake (in SOI) · Pause (Flight)</span></div>
+            <div class="kbd-row"><span class="kbd-key"><kbd>◀</kbd> <kbd>▶</kbd> / <kbd>A</kbd> <kbd>D</kbd></span><span>Step Launch Window Time (±0.1s)</span></div>
+            <div class="kbd-row"><span class="kbd-key"><kbd>▲</kbd> <kbd>▼</kbd></span><span>Step Booster Thrust (±1 m/s)</span></div>
+            <div class="kbd-row"><span class="kbd-key"><kbd>＋</kbd> <kbd>－</kbd></span><span>Precision Zoom In / Out</span></div>
+            <div class="kbd-row"><span class="kbd-key"><kbd>C</kbd></span><span>Recenter Camera View</span></div>
+            <div class="kbd-row"><span class="kbd-key"><kbd>W</kbd> / <kbd>P</kbd></span><span>Hold: Prograde RCS Trim</span></div>
+            <div class="kbd-row"><span class="kbd-key"><kbd>S</kbd> / <kbd>O</kbd></span><span>Hold: Retrograde RCS Trim / Target Brake</span></div>
+            <div class="kbd-row"><span class="kbd-key"><kbd>R</kbd></span><span>Reset Mission to Pad</span></div>
+            <div class="kbd-row"><span class="kbd-key"><kbd>Q</kbd> / <kbd>E</kbd></span><span>Previous / Next Mission</span></div>
+            <div class="kbd-row"><span class="kbd-key"><kbd>H</kbd></span><span>Open / Close Flight Manual (Pauses Game)</span></div>
+            <div class="kbd-row"><span class="kbd-key"><kbd>ESC</kbd></span><span>Close Manual / Cancel Target Placement</span></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <span class="footer-tip">💡 Tip: Press <kbd>H</kbd> or click <strong>MANUAL</strong> in the top bar anytime in-game to pause and review these instructions.</span>
+        <button class="modal-btn primary" id="btn-enter-simulation">ENTER SIMULATION ▶</button>
       </div>
     </div>
   </div>
@@ -469,10 +594,50 @@
     });
 
     document.getElementById('btn-recenter').addEventListener('click', () => {
-      engine.camera.x = 0;
-      engine.camera.y = 0;
-      engine.camera.zoom = engine.currentLevel.isSandbox ? 0.55 : 0.85;
+      engine.recenterCamera();
     });
+
+    // Precision Zoom Controls (single click + hold to repeat)
+    const btnZoomIn = document.getElementById('btn-zoom-in');
+    const btnZoomOut = document.getElementById('btn-zoom-out');
+
+    function attachZoomRepeater(btn, isZoomIn) {
+      if (!btn) return;
+      let intervalId = null;
+      let timeoutId = null;
+
+      const zoomAction = () => {
+        if (isZoomIn) {
+          engine.zoomIn(1.08);
+        } else {
+          engine.zoomOut(1.08);
+        }
+      };
+
+      const start = (e) => {
+        e.preventDefault();
+        zoomAction();
+        timeoutId = setTimeout(() => {
+          intervalId = setInterval(zoomAction, 50);
+        }, 250);
+      };
+
+      const stop = () => {
+        if (timeoutId) clearTimeout(timeoutId);
+        if (intervalId) clearInterval(intervalId);
+        timeoutId = null;
+        intervalId = null;
+      };
+
+      btn.addEventListener('mousedown', start);
+      btn.addEventListener('mouseup', stop);
+      btn.addEventListener('mouseleave', stop);
+      btn.addEventListener('touchstart', start, { passive: false });
+      btn.addEventListener('touchend', stop);
+    }
+
+    attachZoomRepeater(btnZoomIn, true);
+    attachZoomRepeater(btnZoomOut, false);
 
     // Trajectory toggle
     document.getElementById('toggle-trajectory').addEventListener('change', (e) => {
@@ -528,6 +693,45 @@
       engine.nextLevel();
       updateMissionIntel();
     });
+
+    // Flight Operations Manual (Instructions) event listeners
+    const btnOpenManual = document.getElementById('btn-open-manual');
+    if (btnOpenManual) {
+      btnOpenManual.addEventListener('click', () => {
+        engine.openInstructions();
+      });
+    }
+
+    const btnCloseInstX = document.getElementById('btn-close-instructions-x');
+    if (btnCloseInstX) {
+      btnCloseInstX.addEventListener('click', () => {
+        engine.closeInstructions();
+      });
+    }
+
+    const btnEnterSim = document.getElementById('btn-enter-simulation');
+    if (btnEnterSim) {
+      btnEnterSim.addEventListener('click', () => {
+        engine.closeInstructions();
+      });
+    }
+
+    const instructionsModal = document.getElementById('instructions-modal');
+    if (instructionsModal) {
+      instructionsModal.addEventListener('click', (e) => {
+        if (e.target === instructionsModal) {
+          engine.closeInstructions();
+        }
+      });
+    }
+
+    // Auto-Sweep Toggle Button
+    const btnScrubSweep = document.getElementById('btn-scrub-sweep');
+    if (btnScrubSweep) {
+      btnScrubSweep.addEventListener('click', () => {
+        engine.toggleSweep();
+      });
+    }
 
     // Main Game Animation Loop
     let lastTime = performance.now();

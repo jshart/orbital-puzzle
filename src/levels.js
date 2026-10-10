@@ -13,13 +13,13 @@ export function createLevels() {
       subtitle: 'Full 8-Planet System · Complete Slingshot Playground',
       description: 'Explore a complete 8-planet solar system with gas giants and orbiting moons. Pick any planet or moon as your launch base, scrub time, and chain together multi-body gravity assists.',
       isSandbox: true,
-      hint: 'Scrub time to T+1.5s with ~28 m/s thrust to launch from Earth and directly intercept Europa at Jupiter, or right-click anywhere to drop your own custom target gate!',
+      hint: 'Scrub time to T+2.2s with 27 m/s thrust to launch from Terra and directly intercept Europa at Jupiter, or right-click anywhere to drop your own custom target gate!',
       solution: {
-        scrubTime: 1.5,
-        thrust: 28,
-        flightTime: 49.5,
-        relSpeed: 14.2,
-        advice: 'Earth axial rotation at T+1.5s aligns your surface normal straight toward Jupiter\'s incoming orbital path.'
+        scrubTime: 2.2,
+        thrust: 27,
+        flightTime: 12.8,
+        relSpeed: 17.7,
+        advice: 'Terra axial rotation at T+2.2s aligns your launch normal toward Jupiter, threading through Luna\'s wake to intercept Europa directly.'
       },
       build: () => {
         const sun = new CelestialBody({
@@ -614,13 +614,13 @@ export function createLevels() {
       name: 'Level 6: Martian Slingshot',
       subtitle: 'Chapter 2 · Solar Tier · Sol, Terra & Ares',
       description: 'Launch from Terra and use red planet Ares for an interplanetary gravity assist to fling the vessel out to the Asteroid Belt Spaceport.',
-      hint: 'Scrub time to T+20.5s with 28 m/s thrust. Watch the ghost encounter appear at Ares as the craft whips around its trailing edge.',
+      hint: 'Scrub time to T+52.0s with 26 m/s thrust. Watch the ghost encounter appear at Ares as the craft whips around its trailing edge into the asteroid belt.',
       solution: {
-        scrubTime: 20.5,
-        thrust: 28,
-        flightTime: 28.9,
+        scrubTime: 52.0,
+        thrust: 26,
+        flightTime: 14.7,
         relSpeed: 14.6,
-        advice: 'Ares flyby bends the heliocentric velocity vector outward, reaching the 470 AU spaceport with zero cruise fuel spent.'
+        advice: 'Close flyby of Ares (39.6 AU, deep in SOI) delivers an authentic gravitational slingshot, deflecting the vessel out to the 470 AU spaceport.'
       },
       build: () => {
         const sol = new CelestialBody({
@@ -859,13 +859,13 @@ export function createLevels() {
       name: 'Level 9: Triple Assist',
       subtitle: 'Chapter 3 · Master Class Multi-Body · Sol, Terra, Ares & Zeus',
       description: 'Master pilot evaluation: Chain sequential gravity assists past Ares and gas giant Zeus to reach the deep space research station without collision.',
-      hint: 'Scrub time to T+20.5s and launch at 30 m/s. Watch the two encounter ghosts align on your trajectory projection.',
+      hint: 'Scrub time to T+21.0s and launch at 30 m/s. Watch the two encounter ghosts (Ares and Zeus) align on your trajectory projection.',
       solution: {
-        scrubTime: 20.5,
+        scrubTime: 21.0,
         thrust: 30,
-        flightTime: 38.4,
-        relSpeed: 17.2,
-        advice: 'Dual gravity boosts from Ares and Zeus align along the elliptic trajectory for a grand tour injection.'
+        flightTime: 57.8,
+        relSpeed: 14.3,
+        advice: 'Sequential gravity boosts from Ares (54 AU) and gas giant Zeus (156 AU) align along the trajectory for an authentic dual slingshot injection.'
       },
       build: () => {
         const sol = new CelestialBody({
@@ -901,7 +901,7 @@ export function createLevels() {
           radius: 13,
           orbitRadius: 320,
           orbitSpeed: 0.047,
-          initialOrbitAngle: 1.5,
+          initialOrbitAngle: 2.54,
           rotationSpeed: 0.18,
           color: '#ef4444',
           glowColor: 'rgba(239, 68, 68, 0.35)'
@@ -925,9 +925,9 @@ export function createLevels() {
           id: 'wp-9',
           name: 'Frontier Orbital Array',
           parent: sol,
-          orbitRadius: 660,
+          orbitRadius: 600,
           orbitSpeed: 0.016,
-          initialOrbitAngle: 3.5,
+          initialOrbitAngle: 3.23,
           captureRadius: 35,
           maxCaptureSpeed: 18.0
         });

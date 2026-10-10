@@ -19,6 +19,7 @@ if __name__ == '__main__':
     print(f"Starting Orbital Puzzle Prototype server on http://localhost:{PORT}")
     # Open browser automatically
     webbrowser.open(f"http://localhost:{PORT}")
+    socketserver.TCPServer.allow_reuse_address = True
     with socketserver.TCPServer(("", PORT), Handler) as httpd:
         try:
             httpd.serve_forever()

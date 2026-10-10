@@ -57,16 +57,16 @@ Every single level is mathematically verified and tested with deterministic solu
 
 | Level | Name | Tier / Subsystem | Solution Parameters | Expected Flight |
 | :--- | :--- | :--- | :--- | :--- |
-| **0** | **Solar System Sandbox** | Full 8 Planets + Moons | $T = 1.5\text{s}$, Thrust $28\text{ m/s}$ | $49.5\text{s}$ flight to Europa |
+| **0** | **Solar System Sandbox** | Full 8 Planets + Moons | $T = 2.2\text{s}$, Thrust $27\text{ m/s}$ | $12.8\text{s}$ flight to Europa, $\Delta v_{\text{rel}} = 17.7\text{ m/s}$ |
 | **1** | **Orbital Jump** | **Chapter 1 (Tier 3)** · Terra Subsystem | $T = 6.5\text{s}$, Thrust $32\text{ m/s}$ | $3.7\text{s}$ flight, $\Delta v_{\text{rel}} = 16.6\text{ m/s}$ |
 | **2** | **The Moon Bridge** | **Chapter 1 (Tier 3)** · Terra & Luna Subsystem | $T = 3.0\text{s}$, Thrust $32\text{ m/s}$ | $68.5\text{s}$ flight, $\Delta v_{\text{rel}} = 17.5\text{ m/s}$ |
 | **3** | **Jovian Resonance** | **Chapter 1 (Tier 3)** · Zeus & Io Subsystem | $T = 16.0\text{s}$, Thrust $14\text{ m/s}$ | $6.6\text{s}$ flight, $\Delta v_{\text{rel}} = 14.7\text{ m/s}$ |
 | **4** | **Cronus Ring Run** | **Chapter 1 (Tier 3)** · Cronus & Titan Subsystem | $T = 25.0\text{s}$, Thrust $24\text{ m/s}$ | $5.8\text{s}$ flight, $\Delta v_{\text{rel}} = 11.1\text{ m/s}$ |
 | **5** | **Inner Solar Leap** | **Chapter 2 (Tier 2)** · Sol & Astra | $T = 18.0\text{s}$, Thrust $26\text{ m/s}$ | $16.8\text{s}$ flight, $\Delta v_{\text{rel}} = 15.0\text{ m/s}$ |
-| **6** | **Martian Slingshot** | **Chapter 2 (Tier 2)** · Sol, Terra & Ares | $T = 20.5\text{s}$, Thrust $28\text{ m/s}$ | $28.9\text{s}$ flight, $\Delta v_{\text{rel}} = 14.6\text{ m/s}$ |
+| **6** | **Martian Slingshot** | **Chapter 2 (Tier 2)** · Sol, Terra & Ares | $T = 52.0\text{s}$, Thrust $26\text{ m/s}$ | $14.7\text{s}$ flight, $\Delta v_{\text{rel}} = 14.6\text{ m/s}$ (Ares $39.6\text{ AU}$ flyby) |
 | **7** | **Retrograde Vortex** | **Chapter 2 (Tier 2)** · Sol, Terra & Aphrodite Retrograde | $T = 23.5\text{s}$, Thrust $22\text{ m/s}$ | $44.8\text{s}$ flight, $\Delta v_{\text{rel}} = 9.6\text{ m/s}$ |
 | **8** | **Jovian Catapult** | **Chapter 2 (Tier 2)** · Sol, Terra & Zeus | $T = 20.5\text{s}$, Thrust $24\text{ m/s}$ | $72.2\text{s}$ flight, $\Delta v_{\text{rel}} = 13.9\text{ m/s}$ |
-| **9** | **Triple Assist** | **Chapter 3** · Master Class (Sol, Terra, Ares, Zeus) | $T = 20.5\text{s}$, Thrust $30\text{ m/s}$ | $38.4\text{s}$ flight, $\Delta v_{\text{rel}} = 17.2\text{ m/s}$ |
+| **9** | **Triple Assist** | **Chapter 3** · Master Class (Sol, Terra, Ares, Zeus) | $T = 21.0\text{s}$, Thrust $30\text{ m/s}$ | $57.8\text{s}$ flight, $\Delta v_{\text{rel}} = 14.3\text{ m/s}$ (Ares $54\text{ AU}$ + Zeus $156\text{ AU}$) |
 | **10** | **Grand Jovian Tour** | **Chapter 3** · Sol-to-Zeus Orbit Capture | $T = 20.0\text{s}$, Thrust $24\text{ m/s}$ | $32.2\text{s}$ flight, $\Delta v_{\text{rel}} = 6.3\text{ m/s}$ |
 
 ---
@@ -75,21 +75,25 @@ Every single level is mathematically verified and tested with deterministic solu
 
 | Input | Action | Context |
 | :--- | :--- | :--- |
-| **`Space`** | Toggle Simulation Pause / Play | Normal |
+| **`Space`** | Toggle Simulation Pause / Play / Sweep | Normal |
 | **`Hold [Space] / [S]`** | Brake against target relative drift | Flying inside target SOI |
 | **`L`** | Launch Rocket | Docked |
 | **`R`** | Reset Mission to Launchpad | Always |
 | **`Q` / `E`** | Previous / Next Mission | Always |
+| **`H`** | Open / Close Flight Manual (Pauses game) | Always |
 | **`◀` / `▶` Buttons (Scrubber)** | Step launch time by $\pm 0.1\text{s}$ (click or hold) | Docked |
 | **`Left` / `Right Arrow` (or `A` / `D`)** | Micro-step launch window by $\pm 0.1\text{s}$ | Docked |
+| **`▶ SWEEP` / `❚❚ PAUSE`** | Toggle automated launch angle sweep | Docked |
 | **`◀` / `▶` Buttons (Thrust)** | Step booster thrust by $\pm 1\text{ m/s}$ (click or hold) | Docked |
 | **`Up` / `Down Arrow`** | Step booster thrust by $\pm 1\text{ m/s}$ | Docked |
 | **Hold `[P]` / `[W]`** | Fire forward Prograde RCS Thrusters | Flying |
 | **Hold `[O]` / `[S]`** | Fire reverse Retrograde RCS Thrusters | Flying |
+| **`＋` / `－` (or `+` / `-`)** | Precision camera zoom in / out | Camera Controls |
+| **`C` / `CENTER`** | Recenter camera view | Camera Controls |
 | **Right-Click Map** | Drop custom static waypoint | Sandbox Mode |
-| **`Escape`** | Cancel custom waypoint placement | Sandbox Mode |
+| **`Escape`** | Cancel custom waypoint placement / Close modal | Always |
 | **Mouse Left / Middle Drag** | Pan Camera Viewport | Always |
-| **Mouse Scroll Wheel** | Zoom In / Out | Always |
+| **Mouse Scroll Wheel** | Zoom In / Out Smoothly | Always |
 
 ---
 

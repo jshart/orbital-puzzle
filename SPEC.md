@@ -84,7 +84,7 @@ $$\vec{v}_{\text{launch}} = \vec{v}_{\text{body\_orbit}} + \vec{v}_{\text{surfac
   * Solution: $T = 18.0\text{s}$, Thrust $26\text{ m/s}$, Flight $16.8\text{s}$, Rel Speed $15.0\text{ m/s}$.
 * **Level 6: Martian Slingshot (Sol, Terra & Ares)**
   * Anchor: Sol ($M = 42000$) + Terra + Ares. Target: Asteroid Belt Spaceport ($R = 470\text{ AU}$).
-  * Solution: $T = 20.5\text{s}$, Thrust $28\text{ m/s}$, Flight $28.9\text{s}$, Rel Speed $14.6\text{ m/s}$.
+  * Solution: $T = 52.0\text{s}$, Thrust $26\text{ m/s}$, Flight $14.7\text{s}$, Rel Speed $14.6\text{ m/s}$ (close flyby of Ares at $39.6\text{ AU}$, deep inside $122.4\text{ AU}$ SOI).
 * **Level 7: Retrograde Vortex (Sol, Terra & Aphrodite Retrograde)**
   * Anchor: Sol ($M = 40000$) + Terra + Aphrodite ($\omega_{\text{rot}} = -0.15$). Target: Heliostation ($R = 155\text{ AU}$).
   * Solution: $T = 23.5\text{s}$, Thrust $22\text{ m/s}$, Flight $44.8\text{s}$, Rel Speed $9.6\text{ m/s}$.
@@ -94,8 +94,8 @@ $$\vec{v}_{\text{launch}} = \vec{v}_{\text{body\_orbit}} + \vec{v}_{\text{surfac
 
 ### Chapter 3: Master Class Multi-Body Systems
 * **Level 9: Triple Assist (Sol, Terra, Ares & Zeus)**
-  * Anchor: Sol ($M = 46000$) + Terra + Ares + Zeus. Target: Frontier Array ($R = 660\text{ AU}$).
-  * Solution: $T = 20.5\text{s}$, Thrust $30\text{ m/s}$, Flight $38.4\text{s}$, Rel Speed $17.2\text{ m/s}$.
+  * Anchor: Sol ($M = 46000$) + Terra + Ares + Zeus. Target: Frontier Array ($R = 600\text{ AU}$).
+  * Solution: $T = 21.0\text{s}$, Thrust $30\text{ m/s}$, Flight $57.8\text{s}$, Rel Speed $14.3\text{ m/s}$ (chained flybys past Ares at $54\text{ AU}$ and Zeus at $156\text{ AU}$).
 * **Level 10: Grand Jovian Tour (Sol-to-Zeus Insertion)**
   * Anchor: Sol ($M = 46000$) + Terra + Ares + Zeus. Target: Zeus Orbit Station ($R = 62\text{ AU}$ around Zeus).
   * Solution: $T = 20.0\text{s}$, Thrust $24\text{ m/s}$, Flight $32.2\text{s}$, Rel Speed $6.3\text{ m/s}$.
@@ -103,7 +103,7 @@ $$\vec{v}_{\text{launch}} = \vec{v}_{\text{body\_orbit}} + \vec{v}_{\text{surfac
 ### Sandbox Mode (Level 0)
 * Full 8-planet Solar System with gas giants and 8 orbiting moons.
 * Right-click anywhere on the map to place custom waypoints.
-* Verified Solution: $T = 1.5\text{s}$, Thrust $28\text{ m/s}$ ($49.5\text{s}$ flight to Europa).
+* Verified Solution: $T = 2.2\text{s}$, Thrust $27\text{ m/s}$ ($12.8\text{s}$ flight to Europa at Jupiter, Rel Speed $17.7\text{ m/s}$).
 
 ---
 

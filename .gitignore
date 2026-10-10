@@ -1,0 +1,25 @@
+# System & OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Logs & temp files
+*.log
+server_err.log
+server_out.log
+
+# Scratch / Browser profiles
+scratch/
+edge_profile*/
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.env
+.venv/
+env/
+
+# Editor
+.vscode/
+.idea/

@@ -1,0 +1,546 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Orbital Puzzle // Space Mechanics Prototype</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <!-- Canvas container for 2D Solar System simulation -->
+  <div id="canvas-container">
+    <canvas id="sim-canvas"></canvas>
+  </div>
+
+  <!-- UI HUD Layer -->
+  <div class="ui-layer">
+    <!-- Top Bar -->
+    <header class="top-bar interactive">
+      <div class="brand">
+        <h1>ORBITAL PUZZLE</h1>
+        <span class="tag">PHYSICS v0.2</span>
+      </div>
+
+      <!-- Scalable Level Navigator & Selector -->
+      <div class="level-nav">
+        <button class="lvl-nav-btn" id="btn-prev-lvl" title="Previous Mission [Q]">◀</button>
+        <select id="select-level" class="hud-select level-dropdown">
+          <option value="0">SANDBOX: Full 8 Planets</option>
+          <optgroup label="CHAPTER 1: PLANETARY & MOON SUBSYSTEMS (TIER 3)">
+            <option value="1">Level 1: Orbital Jump (Terra Subsystem)</option>
+            <option value="2">Level 2: The Moon Bridge (Terra & Luna Subsystem)</option>
+            <option value="3">Level 3: Jovian Resonance (Zeus & Io Subsystem)</option>
+            <option value="4">Level 4: Cronus Ring Run (Cronus & Titan Subsystem)</option>
+          </optgroup>
+          <optgroup label="CHAPTER 2: INTERPLANETARY SOLAR SYSTEMS (TIER 2)">
+            <option value="5">Level 5: Inner Solar Leap (Sol & Astra)</option>
+            <option value="6">Level 6: Martian Slingshot (Sol, Terra & Ares)</option>
+            <option value="7">Level 7: Retrograde Vortex (Sol, Terra & Aphrodite)</option>
+            <option value="8">Level 8: Jovian Catapult (Sol, Terra & Zeus)</option>
+          </optgroup>
+          <optgroup label="CHAPTER 3: MASTER CLASS MULTI-BODY SYSTEMS">
+            <option value="9">Level 9: Triple Assist (Sol, Terra, Ares & Zeus)</option>
+            <option value="10">Level 10: Grand Jovian Tour (Sol-to-Zeus Insertion)</option>
+          </optgroup>
+        </select>
+        <button class="lvl-nav-btn" id="btn-next-lvl" title="Next Mission [E]">▶</button>
+      </div>
+
+      <!-- Time Controls -->
+      <div class="time-bar">
+        <span class="clock-display" id="telemetry-time">T+00.0s</span>
+        <button class="time-btn" id="btn-pause">❚❚ PAUSE</button>
+        <button class="time-btn" data-speed="0.5">0.5×</button>
+        <button class="time-btn active" data-speed="1.0">1×</button>
+        <button class="time-btn" data-speed="2.0">2×</button>
+        <button class="time-btn" data-speed="5.0">5×</button>
+      </div>
+    </header>
+
+    <!-- Main HUD Panels -->
+    <main class="main-hud">
+      <!-- Left: Flight Telemetry & Mid-Flight Burn Controls -->
+      <aside class="telemetry-panel">
+        <div class="panel interactive">
+          <div class="panel-title">FLIGHT COMPUTER</div>
+
+          <!-- Launch Site Selector -->
+          <div class="data-row" style="margin-bottom: 8px;">
+            <span class="data-label">Launch Base:</span>
+            <select id="select-launch-body" class="hud-select">
+              <!-- Dynamically populated -->
+            </select>
+          </div>
+
+          <div class="data-row">
+            <span class="data-label">Craft State:</span>
+            <span class="status-badge docked" id="telemetry-status">DOCKED</span>
+          </div>
+          <div class="data-row">
+            <span class="data-label">Velocity:</span>
+            <span class="data-value" id="telemetry-speed">0.0 m/s</span>
+          </div>
+          <div class="data-row">
+            <span class="data-label">Current Distance:</span>
+            <span class="data-value" id="telemetry-target-dist">--- AU</span>
+          </div>
+          <div class="data-row">
+            <span class="data-label">Closest Intercept:</span>
+            <span class="data-value" id="telemetry-closest-dist" style="color: #38bdf8;">--- AU</span>
+          </div>
+          <button class="hud-btn" id="btn-place-target" style="width: 100%; margin: 2px 0 8px 0; background: rgba(16, 185, 129, 0.15); border-color: rgba(52, 211, 153, 0.4); color: #34d399; font-size: 0.7rem;">📍 SET TARGET [R-CLICK MAP]</button>
+          
+          <div class="fuel-gauge">
+            <div class="data-row" style="margin-bottom: 2px;">
+              <span class="data-label">Δv RCS Fuel:</span>
+              <span class="data-value" id="fuel-val-label" style="color: #10b981;">100%</span>
+            </div>
+            <div class="fuel-bar-bg">
+              <div class="fuel-bar-fill" id="fuel-bar-fill"></div>
+            </div>
+          </div>
+
+          <!-- Toggles -->
+          <label class="toggle-group">
+            <input type="checkbox" id="toggle-trajectory" checked>
+            <span>Show Trajectory Arc</span>
+          </label>
+          <label class="toggle-group" style="margin-top: 4px;">
+            <input type="checkbox" id="toggle-orbits" checked>
+            <span>Show Planetary Orbits</span>
+          </label>
+          <label class="toggle-group" style="margin-top: 4px;">
+            <input type="checkbox" id="toggle-gravity-wells" checked>
+            <span>Show Gravity Wells (SOI)</span>
+          </label>
+
+          <div class="burn-controls">
+            <button class="hud-btn burn-btn-prograde" id="btn-burn-prograde" disabled title="Hold to fire forward prograde RCS thrusters [P/W]">▲ HOLD: PROGRADE TRIM [P/W]</button>
+            <button class="hud-btn burn-btn-retrograde" id="btn-burn-retrograde" disabled title="Hold to fire reverse retrograde RCS thrusters [O/S]">▼ HOLD: RETROGRADE TRIM [O/S]</button>
+          </div>
+        </div>
+
+        <!-- Launch Velocity Breakdown (Educational HUD) -->
+        <div class="panel interactive" id="launch-breakdown-panel">
+          <div class="panel-title">LAUNCH VECTOR BREAKDOWN</div>
+          <div class="data-row">
+            <span class="data-label">Orbit Tangent:</span>
+            <span class="data-value" id="calc-v-orbit">0.0 m/s</span>
+          </div>
+          <div class="data-row">
+            <span class="data-label">Surface Spin Boost:</span>
+            <span class="data-value" id="calc-v-rot" style="color: #38bdf8;">+0.0 m/s</span>
+          </div>
+          <div class="data-row">
+            <span class="data-label">Booster Thrust:</span>
+            <span class="data-value" id="calc-v-boost">0.0 m/s</span>
+          </div>
+          <div class="data-row" style="border-top: 1px solid rgba(255,255,255,0.1); padding-top: 4px; margin-top: 4px;">
+            <span class="data-label" style="font-weight: bold; color: #facc15;">Net Launch Speed:</span>
+            <span class="data-value" id="calc-v-total" style="color: #facc15; font-size: 0.85rem;">0.0 m/s</span>
+          </div>
+        </div>
+
+        <!-- Live Gravitational Pull Breakdown -->
+        <div class="panel interactive" id="gravity-influence-panel">
+          <div class="panel-title">DOMINANT GRAVITY WELLS</div>
+          <div id="gravity-breakdown-list">
+            <!-- Dynamically populated -->
+          </div>
+        </div>
+      </aside>
+
+      <!-- Right: Mission Briefing & Intel -->
+      <aside class="info-panel">
+        <div class="panel interactive" style="max-height: 480px; overflow-y: auto;">
+          <div class="panel-title" id="mission-title">MISSION BRIEFING</div>
+          <p class="mission-desc" id="mission-desc">
+            Analyze the system orbits and rotational directions. Time your launch window carefully.
+          </p>
+
+          <!-- Flight Advisory / Hint Card -->
+          <div class="hint-container">
+            <div class="hint-header">
+              <span class="hint-title">💡 FLIGHT ADVISORY</span>
+              <button class="hint-btn-toggle" id="btn-toggle-hint">SHOW HINT</button>
+            </div>
+            <div class="hint-card" id="hint-card" style="display: none;">
+              <p class="hint-text" id="hint-desc"></p>
+              <button class="hint-apply-btn" id="btn-apply-hint">AUTO-DIAL SOLUTION ⚡</button>
+            </div>
+          </div>
+
+          <div class="panel-title" style="margin-top: 14px;">SYSTEM BODIES</div>
+          <table class="intel-table" id="intel-bodies-table">
+            <thead>
+              <tr>
+                <th>Body</th>
+                <th>Mass</th>
+                <th>Orbit</th>
+                <th>Axial Spin</th>
+              </tr>
+            </thead>
+            <tbody id="intel-bodies-list">
+              <!-- Dynamically populated -->
+            </tbody>
+          </table>
+        </div>
+      </aside>
+    </main>
+
+    <!-- Bottom Launch Control Console -->
+    <footer class="bottom-console interactive">
+      <!-- Launch Time Window Scrubber with Fine-Step Arrows -->
+      <div class="slider-group" style="min-width: 270px;">
+        <div class="slider-header">
+          <span>LAUNCH WINDOW (SCRUBBER)</span>
+          <span id="label-scrub-time">T+0.0s (AIM)</span>
+        </div>
+        <div class="scrub-row">
+          <button class="step-btn" id="btn-scrub-prev" title="Step Back 0.1s [◀ / A]">◀</button>
+          <input type="range" id="input-scrub-time" min="0" max="90" value="0" step="0.1">
+          <button class="step-btn" id="btn-scrub-next" title="Step Forward 0.1s [▶ / D]">▶</button>
+        </div>
+      </div>
+
+      <!-- Booster Thrust Dial with Step Arrows -->
+      <div class="slider-group" style="min-width: 250px;">
+        <div class="slider-header">
+          <span>BOOSTER THRUST</span>
+          <span id="label-thrust">28 m/s</span>
+        </div>
+        <div class="scrub-row">
+          <button class="step-btn" id="btn-thrust-prev" title="Decrease Thrust 1 m/s [▼ / Down Arrow]">◀</button>
+          <input type="range" id="input-thrust" min="10" max="65" value="28" step="1">
+          <button class="step-btn" id="btn-thrust-next" title="Increase Thrust 1 m/s [▲ / Up Arrow]">▶</button>
+        </div>
+      </div>
+
+      <!-- Main Launch Button -->
+      <button class="launch-btn" id="btn-launch">LAUNCH ROCKET [L]</button>
+
+      <!-- Mission Reset & Camera Reset -->
+      <button class="reset-btn" id="btn-reset">RESET [R]</button>
+      <button class="reset-btn" id="btn-recenter">CENTER CAM</button>
+    </footer>
+  </div>
+
+  <!-- Victory / Defeat Modal -->
+  <div class="modal-overlay" id="mission-modal">
+    <div class="modal-content">
+      <h2 class="modal-title success" id="modal-title">MISSION ACCOMPLISHED!</h2>
+      <p class="modal-desc" id="modal-desc">
+        Target orbital waypoint captured successfully.
+      </p>
+      <div class="modal-actions">
+        <button class="modal-btn secondary" id="modal-retry-btn">REPLAY</button>
+        <button class="modal-btn primary" id="modal-next-btn">NEXT LEVEL ▶</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Main Game Initialization Script -->
+  <script type="module">
+    import { GameEngine } from './src/game.js';
+
+    const canvas = document.getElementById('sim-canvas');
+    const engine = new GameEngine(canvas);
+    window.engine = engine;
+
+    // Auto-update UI when level changes
+    engine.onLevelLoaded = () => updateMissionIntel();
+
+    // Populate Mission Intel and Launch Site Dropdown
+    function updateMissionIntel() {
+      const level = engine.currentLevel;
+      document.getElementById('mission-title').innerText = level.name.toUpperCase();
+      document.getElementById('mission-desc').innerText = level.description;
+
+      // Sync Level Dropdown selector
+      const levelSelect = document.getElementById('select-level');
+      if (levelSelect) {
+        levelSelect.value = String(engine.currentLevelIndex);
+      }
+
+      // Sync Hint content and reset card visibility
+      const hintDesc = document.getElementById('hint-desc');
+      const hintCard = document.getElementById('hint-card');
+      const hintBtn = document.getElementById('btn-toggle-hint');
+      if (hintDesc) {
+        hintDesc.innerText = level.hint || 'Free sandbox flight. Navigate anywhere in the Solar System!';
+      }
+      if (hintCard) hintCard.style.display = 'none';
+      if (hintBtn) hintBtn.innerText = 'SHOW HINT';
+
+      // Populate Launch Site Dropdown
+      const selectLaunch = document.getElementById('select-launch-body');
+      selectLaunch.innerHTML = '';
+      for (const b of engine.bodies) {
+        if (b.isStar) continue; // Cannot launch from the sun
+        const opt = document.createElement('option');
+        opt.value = b.id;
+        opt.innerText = b.name;
+        if (engine.rocket.dockedBody && engine.rocket.dockedBody.id === b.id) {
+          opt.selected = true;
+        }
+        selectLaunch.appendChild(opt);
+      }
+
+      // Populate System Bodies Table
+      const tbody = document.getElementById('intel-bodies-list');
+      tbody.innerHTML = '';
+      for (const b of engine.bodies) {
+        const tr = document.createElement('tr');
+        const spinBadge = b.rotationSpeed > 0 
+          ? '<span class="intel-badge badge-prograde">⟲ Prograde</span>' 
+          : (b.rotationSpeed < 0 ? '<span class="intel-badge badge-retrograde">⟳ Retrograde</span>' : 'None');
+
+        tr.innerHTML = `
+          <td><strong style="color: ${b.color};">${b.name}</strong></td>
+          <td>${b.mass}</td>
+          <td>${b.parent ? b.orbitRadius + ' AU' : 'Anchor'}</td>
+          <td>${spinBadge}</td>
+        `;
+        tbody.appendChild(tr);
+      }
+
+      // Update initial sliders
+      const scrubSlider = document.getElementById('input-scrub-time');
+      const scrubLabel = document.getElementById('label-scrub-time');
+      if (scrubSlider && scrubLabel) {
+        scrubSlider.value = engine.simTime;
+        scrubLabel.innerText = `T+${engine.simTime.toFixed(1)}s (AIM)`;
+      }
+
+      document.getElementById('input-thrust').value = engine.rocket.launchThrust;
+      document.getElementById('label-thrust').innerText = `${engine.rocket.launchThrust} m/s`;
+    }
+
+    updateMissionIntel();
+
+    // Hook Launch Site Selector
+    document.getElementById('select-launch-body').addEventListener('change', (e) => {
+      engine.setLaunchBody(e.target.value);
+    });
+
+    // Hook Level Navigation Dropdown & Step Buttons
+    document.getElementById('select-level').addEventListener('change', (e) => {
+      engine.loadLevel(parseInt(e.target.value));
+    });
+    document.getElementById('btn-prev-lvl').addEventListener('click', () => {
+      engine.prevLevel();
+    });
+    document.getElementById('btn-next-lvl').addEventListener('click', () => {
+      engine.nextLevel();
+    });
+
+    // Hook Hint Toggle & Auto-Dial
+    document.getElementById('btn-toggle-hint').addEventListener('click', () => {
+      const hintCard = document.getElementById('hint-card');
+      const hintBtn = document.getElementById('btn-toggle-hint');
+      const isHidden = hintCard.style.display === 'none';
+      hintCard.style.display = isHidden ? 'block' : 'none';
+      hintBtn.innerText = isHidden ? 'HIDE HINT' : 'SHOW HINT';
+    });
+
+    document.getElementById('btn-apply-hint').addEventListener('click', () => {
+      engine.applyHint();
+      const applyBtn = document.getElementById('btn-apply-hint');
+      applyBtn.innerText = 'SOLUTION APPLIED ✓';
+      setTimeout(() => { applyBtn.innerText = 'AUTO-DIAL SOLUTION ⚡'; }, 1500);
+    });
+
+    // Time controls
+    document.getElementById('btn-pause').addEventListener('click', () => {
+      engine.togglePause();
+    });
+
+    document.querySelectorAll('.time-btn[data-speed]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.time-btn[data-speed]').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        engine.setTimeScale(parseFloat(btn.dataset.speed));
+      });
+    });
+
+    // Launch Time Window Scrubber & Booster Thrust Sliders
+    const scrubInput = document.getElementById('input-scrub-time');
+    const scrubLabel = document.getElementById('label-scrub-time');
+    scrubInput.addEventListener('input', (e) => {
+      const t = parseFloat(e.target.value);
+      scrubLabel.innerText = `T+${t.toFixed(1)}s (AIM)`;
+      engine.setScrubTime(t);
+    });
+
+    // Fine-Step Scrubber Arrow Buttons (single click + hold to repeat)
+    const btnScrubPrev = document.getElementById('btn-scrub-prev');
+    const btnScrubNext = document.getElementById('btn-scrub-next');
+
+    function attachStepRepeater(btn, delta) {
+      if (!btn) return;
+      let intervalId = null;
+      let timeoutId = null;
+
+      const stepAction = () => {
+        engine.stepScrubTime(delta);
+      };
+
+      const start = (e) => {
+        e.preventDefault();
+        stepAction();
+        timeoutId = setTimeout(() => {
+          intervalId = setInterval(stepAction, 60);
+        }, 280);
+      };
+
+      const stop = () => {
+        if (timeoutId) clearTimeout(timeoutId);
+        if (intervalId) clearInterval(intervalId);
+        timeoutId = null;
+        intervalId = null;
+      };
+
+      btn.addEventListener('mousedown', start);
+      btn.addEventListener('mouseup', stop);
+      btn.addEventListener('mouseleave', stop);
+      btn.addEventListener('touchstart', start, { passive: false });
+      btn.addEventListener('touchend', stop);
+    }
+
+    attachStepRepeater(btnScrubPrev, -0.1);
+    attachStepRepeater(btnScrubNext, 0.1);
+
+    const thrustInput = document.getElementById('input-thrust');
+    const thrustLabel = document.getElementById('label-thrust');
+    thrustInput.addEventListener('input', (e) => {
+      const thrust = parseFloat(e.target.value);
+      thrustLabel.innerText = `${thrust} m/s`;
+      engine.rocket.launchThrust = thrust;
+      engine.computeTrajectory();
+      engine.updateHUD();
+    });
+
+    // Fine-Step Thrust Arrow Buttons (single click + hold to repeat)
+    const btnThrustPrev = document.getElementById('btn-thrust-prev');
+    const btnThrustNext = document.getElementById('btn-thrust-next');
+
+    function attachThrustRepeater(btn, delta) {
+      if (!btn) return;
+      let intervalId = null;
+      let timeoutId = null;
+
+      const stepAction = () => {
+        engine.stepThrust(delta);
+      };
+
+      const start = (e) => {
+        e.preventDefault();
+        stepAction();
+        timeoutId = setTimeout(() => {
+          intervalId = setInterval(stepAction, 80);
+        }, 280);
+      };
+
+      const stop = () => {
+        if (timeoutId) clearTimeout(timeoutId);
+        if (intervalId) clearInterval(intervalId);
+        timeoutId = null;
+        intervalId = null;
+      };
+
+      btn.addEventListener('mousedown', start);
+      btn.addEventListener('mouseup', stop);
+      btn.addEventListener('mouseleave', stop);
+      btn.addEventListener('touchstart', start, { passive: false });
+      btn.addEventListener('touchend', stop);
+    }
+
+    attachThrustRepeater(btnThrustPrev, -1);
+    attachThrustRepeater(btnThrustNext, 1);
+
+    // Launch & Reset buttons
+    document.getElementById('btn-launch').addEventListener('click', () => {
+      engine.triggerLaunch();
+    });
+
+    document.getElementById('btn-reset').addEventListener('click', () => {
+      engine.resetCurrentLevel();
+      updateMissionIntel();
+    });
+
+    document.getElementById('btn-recenter').addEventListener('click', () => {
+      engine.camera.x = 0;
+      engine.camera.y = 0;
+      engine.camera.zoom = engine.currentLevel.isSandbox ? 0.55 : 0.85;
+    });
+
+    // Trajectory toggle
+    document.getElementById('toggle-trajectory').addEventListener('change', (e) => {
+      engine.showTrajectory = e.target.checked;
+      engine.computeTrajectory();
+    });
+
+    // Planetary Orbits toggle
+    document.getElementById('toggle-orbits').addEventListener('change', (e) => {
+      engine.showOrbits = e.target.checked;
+    });
+
+    // Gravity Wells toggle
+    document.getElementById('toggle-gravity-wells').addEventListener('change', (e) => {
+      engine.showGravityWells = e.target.checked;
+    });
+
+    // Prograde & Retrograde continuous hold thruster buttons
+    const btnPrograde = document.getElementById('btn-burn-prograde');
+    const btnRetrograde = document.getElementById('btn-burn-retrograde');
+
+    const startPrograde = (e) => { e.preventDefault(); engine.setTrim('PROGRADE'); };
+    const startRetrograde = (e) => { e.preventDefault(); engine.setTrim('RETROGRADE'); };
+    const stopTrim = (e) => { e.preventDefault(); engine.setTrim(null); };
+
+    btnPrograde.addEventListener('mousedown', startPrograde);
+    btnPrograde.addEventListener('mouseup', stopTrim);
+    btnPrograde.addEventListener('mouseleave', stopTrim);
+    btnPrograde.addEventListener('touchstart', startPrograde);
+    btnPrograde.addEventListener('touchend', stopTrim);
+
+    btnRetrograde.addEventListener('mousedown', startRetrograde);
+    btnRetrograde.addEventListener('mouseup', stopTrim);
+    btnRetrograde.addEventListener('mouseleave', stopTrim);
+    btnRetrograde.addEventListener('touchstart', startRetrograde);
+    btnRetrograde.addEventListener('touchend', stopTrim);
+
+    // Place Target button (Sandbox mode)
+    document.getElementById('btn-place-target').addEventListener('click', () => {
+      engine.isPlacingTarget = !engine.isPlacingTarget;
+      engine.updateHUD();
+    });
+
+    // Modal buttons
+    document.getElementById('modal-retry-btn').addEventListener('click', () => {
+      engine.closeModal();
+      engine.resetCurrentLevel();
+      updateMissionIntel();
+    });
+
+    document.getElementById('modal-next-btn').addEventListener('click', () => {
+      engine.closeModal();
+      engine.nextLevel();
+      updateMissionIntel();
+    });
+
+    // Main Game Animation Loop
+    let lastTime = performance.now();
+    function loop(currentTime) {
+      const dt = Math.min(0.1, (currentTime - lastTime) / 1000);
+      lastTime = currentTime;
+
+      engine.update(dt);
+      engine.render();
+
+      requestAnimationFrame(loop);
+    }
+    requestAnimationFrame(loop);
+  </script>
+</body>
+</html>

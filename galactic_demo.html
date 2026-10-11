@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Orbital Puzzle // Galactic Sector Distribution Prototype</title>
+  <link rel="stylesheet" href="style.css">
+  <style>
+    /* Specialized Glassmorphism styles for the Galactic Distribution Demo */
+    .galactic-badge {
+      display: inline-block;
+      padding: 2px 6px;
+      font-size: 0.65rem;
+      font-weight: 700;
+      border-radius: 4px;
+      background: rgba(168, 85, 247, 0.2);
+      border: 1px solid rgba(168, 85, 247, 0.5);
+      color: #c084fc;
+      margin-left: 8px;
+    }
+    .distro-bar-container {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .distro-bar {
+      height: 6px;
+      border-radius: 3px;
+      transition: width 0.3s ease;
+    }
+    .blend-slider-box {
+      background: rgba(15, 23, 42, 0.65);
+      border: 1px solid rgba(56, 189, 248, 0.3);
+      border-radius: 8px;
+      padding: 10px;
+      margin-bottom: 12px;
+    }
+    .blend-labels {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.68rem;
+      color: #94a3b8;
+      margin-top: 4px;
+    }
+    .star-inspect-card {
+      background: rgba(15, 23, 42, 0.85);
+      border: 1px solid rgba(56, 189, 248, 0.4);
+      border-radius: 8px;
+      padding: 12px;
+      margin-top: 10px;
+      box-shadow: 0 4px 14px rgba(0, 0, 0, 0.4);
+    }
+    .intel-desc-box {
+      font-size: 0.72rem;
+      line-height: 1.4;
+      color: #cbd5e1;
+      margin-top: 6px;
+      padding: 6px;
+      background: rgba(0, 0, 0, 0.3);
+      border-radius: 4px;
+      border-left: 2px solid #38bdf8;
+    }
+    .back-btn {
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      color: #e2e8f0;
+      padding: 4px 10px;
+      border-radius: 4px;
+      font-size: 0.72rem;
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      transition: all 0.2s;
+    }
+    .back-btn:hover {
+      background: rgba(56, 189, 248, 0.25);
+      border-color: #38bdf8;
+      color: #ffffff;
+    }
+  </style>
+</head>
+<body>
+  <!-- Canvas container for Galactic Sector simulation -->
+  <div id="canvas-container">
+    <canvas id="galactic-canvas"></canvas>
+  </div>
+
+  <!-- UI HUD Layer -->
+  <div class="ui-layer">
+    <!-- Top Bar -->
+    <header class="top-bar interactive">
+      <div class="brand">
+        <h1>ORBITAL PUZZLE</h1>
+        <span class="tag">TIER 1 PROTOTYPE</span>
+        <span class="galactic-badge">GALACTIC SECTOR SCALE</span>
+      </div>
+
+      <div style="display: flex; align-items: center; gap: 12px;">
+        <span id="stat-count" style="font-size: 0.75rem; color: #38bdf8; font-family: monospace;">65 Bodies</span>
+        <span style="font-size: 0.75rem; color: #94a3b8; font-family: monospace;">Diversity Entropy: <strong id="stat-diversity" style="color: #34d399;">84.2%</strong></span>
+        <a href="index.html" class="back-btn" title="Return to Main Game">◀ MAIN GAME</a>
+      </div>
+
+      <!-- Time Controls -->
+      <div class="time-bar">
+        <button class="time-btn" id="btn-pause">❚❚ PAUSE</button>
+        <button class="time-btn" data-speed="0.5">0.5×</button>
+        <button class="time-btn active" data-speed="1.0">1×</button>
+        <button class="time-btn" data-speed="2.0">2×</button>
+        <button class="time-btn" data-speed="5.0">5×</button>
+      </div>
+    </header>
+
+    <!-- Main HUD Panels -->
+    <main class="main-hud">
+      <!-- Left: Distribution Generator & Sector Settings -->
+      <aside class="telemetry-panel">
+        <div class="panel interactive">
+          <div class="panel-title">SECTOR GENERATOR CONTROLS</div>
+
+          <!-- Blend Slider Box -->
+          <div class="blend-slider-box">
+            <div class="data-row" style="margin-bottom: 4px;">
+              <span class="data-label" style="font-weight: bold; color: #facc15;">Distribution Bias:</span>
+              <span class="data-value" id="label-blend" style="color: #38bdf8;">100% Game-Friendly</span>
+            </div>
+            <input type="range" id="input-blend" min="0" max="1" step="0.05" value="1.0" style="width: 100%;">
+            <div class="blend-labels">
+              <span>0% Real Milky Way</span>
+              <span>50% Hybrid</span>
+              <span>100% Balanced</span>
+            </div>
+          </div>
+
+          <!-- Star Count Slider -->
+          <div class="data-row" style="margin-bottom: 6px;">
+            <span class="data-label">Star Density:</span>
+            <span class="data-value" id="label-star-count">65 Stars</span>
+          </div>
+          <input type="range" id="input-star-count" min="25" max="110" step="5" value="65" style="width: 100%; margin-bottom: 10px;">
+
+          <!-- Seed Controls -->
+          <div style="display: flex; gap: 6px; margin-bottom: 12px;">
+            <button class="hud-btn" id="btn-random-seed" style="flex: 1; background: rgba(56, 189, 248, 0.2); border-color: #38bdf8; color: #38bdf8;">🎲 RANDOMIZE SECTOR</button>
+            <button class="hud-btn" id="btn-recenter-cam" style="padding: 4px 10px;">CENTER</button>
+          </div>
+
+          <!-- Test Probe Launcher -->
+          <div style="border-top: 1px solid rgba(255, 255, 255, 0.1); padding-top: 10px; margin-bottom: 10px;">
+            <div class="data-label" style="margin-bottom: 4px; font-weight: bold; color: #f59e0b;">INTERSTELLAR GRAVITY PROBE:</div>
+            <button class="hud-btn" id="btn-launch-probe" style="width: 100%; background: rgba(245, 158, 11, 0.2); border-color: #f59e0b; color: #fbbf24; font-size: 0.75rem;">⚡ LAUNCH TEST SLINGSHOT PROBE</button>
+          </div>
+
+          <!-- Visual Toggles -->
+          <label class="toggle-group">
+            <input type="checkbox" id="toggle-binary-tracks" checked>
+            <span>Binary Barycenter Tracks</span>
+          </label>
+          <label class="toggle-group" style="margin-top: 4px;">
+            <input type="checkbox" id="toggle-gravity-wells" checked>
+            <span>Selected Gravity Wells</span>
+          </label>
+          <label class="toggle-group" style="margin-top: 4px;">
+            <input type="checkbox" id="toggle-all-wells">
+            <span>Show ALL Sector Wells</span>
+          </label>
+          <label class="toggle-group" style="margin-top: 4px;">
+            <input type="checkbox" id="toggle-labels" checked>
+            <span>Stellar Names & Classes</span>
+          </label>
+        </div>
+      </aside>
+
+      <!-- Right: Distribution Comparison Table & Selected Star Telemetry -->
+      <aside class="info-panel" style="width: 440px;">
+        <!-- Live Comparison Table -->
+        <div class="panel interactive" style="max-height: 380px; overflow-y: auto;">
+          <div class="panel-title">STELLAR DISTRIBUTION ANALYSIS</div>
+          <table class="intel-table">
+            <thead>
+              <tr>
+                <th>Class</th>
+                <th>Qty</th>
+                <th>Sample Share</th>
+                <th title="Real Milky Way Census">Milky Way</th>
+                <th title="Proposed Game-Friendly Model">Game Target</th>
+              </tr>
+            </thead>
+            <tbody id="distro-table-body">
+              <!-- Dynamically populated -->
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Selected Star Telemetry Card -->
+        <div class="star-inspect-card" id="selected-star-card" style="display: none;">
+          <div class="data-row" style="margin-bottom: 4px;">
+            <strong id="card-star-name" style="font-size: 0.85rem; color: #38bdf8;">STAR NAME</strong>
+            <span class="status-badge flying" id="card-star-type">Solitary</span>
+          </div>
+          <div class="data-row">
+            <span class="data-label">Classification:</span>
+            <span class="data-value" id="card-star-class" style="color: #facc15;">Class G</span>
+          </div>
+          <div class="data-row">
+            <span class="data-label">Surface Temp:</span>
+            <span class="data-value" id="card-star-temp">5,600 K</span>
+          </div>
+          <div class="data-row">
+            <span class="data-label">Stellar Mass:</span>
+            <span class="data-value" id="card-star-mass">1.0 M☉</span>
+          </div>
+          <div class="data-row">
+            <span class="data-label">Physical Radius:</span>
+            <span class="data-value" id="card-star-radius">21 AU</span>
+          </div>
+
+          <div class="intel-desc-box" id="card-star-desc">
+            Astrophysical description...
+          </div>
+          <div class="intel-desc-box" id="card-star-mechanic" style="border-left-color: #f59e0b; margin-top: 4px; color: #fde68a;">
+            Gameplay mechanics...
+          </div>
+        </div>
+      </aside>
+    </main>
+
+    <!-- Bottom Controls -->
+    <footer class="bottom-console interactive">
+      <div style="font-size: 0.75rem; color: #94a3b8; display: flex; align-items: center; gap: 14px;">
+        <span>🖱 <strong>Left-Click & Drag:</strong> Pan Galactic Map</span>
+        <span>🔍 <strong>Scroll Wheel:</strong> Zoom In / Out</span>
+        <span>⭐ <strong>Left-Click Star:</strong> Inspect Astrodynamics & Physics</span>
+      </div>
+
+      <!-- Precision Zoom Cluster -->
+      <div class="cam-cluster" style="margin-left: auto;">
+        <span class="zoom-display" id="label-zoom" title="Current Zoom Level">38%</span>
+        <button class="reset-btn" id="btn-recenter" title="Recenter Camera View" style="padding: 4px 8px; font-size: 0.7rem;">CENTER</button>
+      </div>
+    </footer>
+  </div>
+
+  <!-- Bootstrapping Script -->
+  <script type="module">
+    import { GalacticDemoApp } from './src/galactic/galactic_demo.js';
+
+    const canvas = document.getElementById('galactic-canvas');
+    const app = new GalacticDemoApp(canvas);
+    window.galacticApp = app;
+
+    // Blend Slider
+    const inputBlend = document.getElementById('input-blend');
+    const labelBlend = document.getElementById('label-blend');
+    inputBlend.addEventListener('input', (e) => {
+      const val = parseFloat(e.target.value);
+      if (val === 0) labelBlend.innerText = '0% Real Milky Way';
+      else if (val === 1) labelBlend.innerText = '100% Game-Friendly';
+      else labelBlend.innerText = `${Math.round(val * 100)}% Hybrid Blend`;
+      app.setBlend(val);
+    });
+
+    // Star Count Slider
+    const inputCount = document.getElementById('input-star-count');
+    const labelCount = document.getElementById('label-star-count');
+    inputCount.addEventListener('input', (e) => {
+      const val = parseInt(e.target.value);
+      labelCount.innerText = `${val} Stars`;
+      app.setStarCount(val);
+    });
+
+    // Randomize Seed Button
+    document.getElementById('btn-random-seed').addEventListener('click', () => {
+      app.randomizeSeed();
+    });
+
+    // Recenter
+    const recenter = () => {
+      app.camera.x = 0;
+      app.camera.y = 0;
+      app.camera.zoom = 0.38;
+      app.updateZoomDisplay();
+    };
+    document.getElementById('btn-recenter').addEventListener('click', recenter);
+    document.getElementById('btn-recenter-cam').addEventListener('click', recenter);
+
+    // Launch Test Probe
+    document.getElementById('btn-launch-probe').addEventListener('click', () => {
+      app.fireDefaultProbe();
+    });
+
+    // Toggles
+    document.getElementById('toggle-binary-tracks').addEventListener('change', (e) => {
+      app.showBinaryOrbits = e.target.checked;
+    });
+    document.getElementById('toggle-gravity-wells').addEventListener('change', (e) => {
+      app.showGravityWells = e.target.checked;
+    });
+    document.getElementById('toggle-all-wells').addEventListener('change', (e) => {
+      app.showAllWells = e.target.checked;
+    });
+    document.getElementById('toggle-labels').addEventListener('change', (e) => {
+      app.showLabels = e.target.checked;
+    });
+
+    // Time controls
+    const btnPause = document.getElementById('btn-pause');
+    btnPause.addEventListener('click', () => {
+      app.isPaused = !app.isPaused;
+      btnPause.innerText = app.isPaused ? '▶ RESUME' : '❚❚ PAUSE';
+      btnPause.classList.toggle('active', app.isPaused);
+    });
+
+    document.querySelectorAll('.time-btn[data-speed]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.time-btn[data-speed]').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        app.timeScale = parseFloat(btn.dataset.speed);
+      });
+    });
+
+    // Animation loop
+    let lastTime = performance.now();
+    function loop(currentTime) {
+      const dt = Math.min(0.1, (currentTime - lastTime) / 1000);
+      lastTime = currentTime;
+
+      app.update(dt);
+      app.render();
+
+      requestAnimationFrame(loop);
+    }
+    requestAnimationFrame(loop);
+  </script>
+</body>
+</html>

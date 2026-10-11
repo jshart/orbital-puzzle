@@ -6,13 +6,15 @@ Zero runtime dependencies. Pure vanilla HTML5, Canvas, and Web Audio API. Runs 1
 
 ---
 
-## 🚀 Quick Start & Hosting Requirements
+## 🚀 Quick Start & Live Deployment
 
-* **Local Run:** Run `python serve.py` from the project root (opens automatically in your default browser at `http://localhost:8000`).
-* **Manual Server:** Or run `python -m http.server 8000` and visit **[http://localhost:8000](http://localhost:8000)**.
+* **🌐 Live GitHub Pages (Main Game):** **[https://jshart.github.io/orbital-puzzle/](https://jshart.github.io/orbital-puzzle/)**
+* **🌌 Live Galactic Sector Distribution Demo:** **[https://jshart.github.io/orbital-puzzle/galactic_demo.html](https://jshart.github.io/orbital-puzzle/galactic_demo.html)**
+* **Local Run:** Run `python serve.py` from the project root (opens automatically in your browser at `http://localhost:8000`).
+* **Specific Demo:** Run `python serve.py galactic_demo.html` to open the Tier 1 Galactic Sector Distribution prototype.
 * **Hosting Requirements:**
-  * **No server-side code or runtime backend:** All gravity simulation, Runge-Kutta 4th order numerical integration, trajectory forward prediction, and audio synthesis run 100% client-side inside the user's browser.
-  * **Zero server dependencies:** Can be hosted on any static web host, CDN, or object store (GitHub Pages, Cloudflare Pages, Netlify, Vercel, AWS S3, etc.).
+  * **No server-side code or runtime backend:** All gravity simulation, Runge-Kutta 4th order numerical integration, trajectory forward prediction, and audio synthesis run 100% client-side inside the browser.
+  * **Zero server dependencies:** Deployed directly via GitHub Pages with zero build step.
 
 ---
 
@@ -111,11 +113,15 @@ All orbit lines, SOI dashed circles, trajectory predictions, velocity arrows, ti
 Orbital Puzzle/
 ├── index.html          # Web UI layout, HUD panels, and modular bootstrap
 ├── style.css           # Glassmorphism cybernetic UI styling
-├── serve.py            # Local Python dev server
+├── serve.py            # Local Python dev server (supports target page argument)
 ├── README.md           # Documentation, quick start, verified solution table
 ├── SPEC.md             # Detailed engineering specification
-├── HANDOVER.md         # Handover notes, GitHub setup, roadmap for next chat
+├── HANDOVER.md         # Handover notes, GitHub setup, roadmap
+├── galactic_demo.html  # Tier 1 Galactic Sector distribution prototype
 ├── .gitignore          # Ignores temp logs, browser profiles, and scratch scripts
+├── research/           # Stellar astrophysics & exoplanet population research
+│   ├── stellar_population_by_spectral_class.md
+│   └── exoplanet_host_stars_by_spectral_class.md
 └── src/
     ├── celestial.js    # CelestialBody class (orbits, rotation, gravity, rings, orbit paths)
     ├── game.js         # GameEngine loop, inputs, adaptive zoom, HUD sync
@@ -124,5 +130,6 @@ Orbital Puzzle/
     ├── rocket.js       # Rocket state machine, continuous RCS, target braking physics
     ├── sound.js        # Procedural Web Audio API engine rumble & chord chimes
     ├── vector.js       # 2D Vector math library
-    └── waypoint.js     # Target waypoint class with SOI and relative velocity checks
+    ├── waypoint.js     # Target waypoint class with SOI and relative velocity checks
+    └── galactic/       # Tier 1 Galactic Sector modules (distribution, renderer, sector generator)
 ```

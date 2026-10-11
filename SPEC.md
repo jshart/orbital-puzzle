@@ -113,9 +113,10 @@ $$\vec{v}_{\text{launch}} = \vec{v}_{\text{body\_orbit}} + \vec{v}_{\text{surfac
 Orbital Puzzle/
 ├── index.html          # Web UI layout & modular script bootstrapping
 ├── style.css           # Glassmorphism cybernetic UI styling
-├── serve.py            # Local Python dev server
+├── serve.py            # Local Python dev server (supports target page argument)
 ├── README.md           # Documentation, quick start, verified solution table
 ├── SPEC.md             # This design & technical specification
+├── galactic_demo.html  # Tier 1 Galactic Sector distribution prototype
 └── src/
     ├── celestial.js    # CelestialBody class (orbits, rotation, gravity, rings)
     ├── game.js         # GameEngine loop, inputs, adaptive zoom, HUD sync
@@ -124,5 +125,11 @@ Orbital Puzzle/
     ├── rocket.js       # Rocket state machine, continuous RCS, target braking physics
     ├── sound.js        # Procedural Web Audio API engine rumble & chord chimes
     ├── vector.js       # 2D Vector math library
-    └── waypoint.js     # Target waypoint class with SOI and relative velocity checks
-```
+    ├── waypoint.js     # Target waypoint class with SOI and relative velocity checks
+    └── galactic/       # Tier 1 Galactic Sector modules (distribution, renderer, sector generator)
+
+---
+
+## 6. Development & Autonomous Execution Protocol
+* **Autonomous Server Launching:** Whenever writing, testing, or demonstrating code, prototypes, or side demos, the AI pair programmer **MUST always automatically launch the local development server** (`python serve.py [target]`) in the background. The user should never have to manually run terminal commands to start web servers.
+* **Direct Clickable URLs:** Responses must always provide direct, clickable markdown links (e.g. `http://localhost:8000/galactic_demo.html` or `http://localhost:8000/`) so the user can immediately jump into the live application with one click.

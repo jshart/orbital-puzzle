@@ -92,12 +92,16 @@ git push -u origin main
 ```
 Orbital Puzzle/
 ├── index.html          # Semantic HTML5 layout, HUD telemetry panels, modular bootstrap script
+├── galactic_demo.html  # Tier 1 Galactic Sector distribution prototype
 ├── style.css           # Glassmorphism cybernetic UI theme, HUD badges, custom range sliders
-├── serve.py            # Zero-dependency local dev server (auto-launches browser on port 8000)
+├── serve.py            # Zero-dependency local dev server (auto-launches browser on port 8000, accepts target page)
 ├── README.md           # Quickstart guide, hosting requirements, level catalog, controls
 ├── SPEC.md             # Complete engineering & mathematical specification
 ├── HANDOVER.md         # This handover document & snapshot guide
 ├── .gitignore          # Ignores temp logs, browser profiles, and scratch scripts
+├── research/           # Stellar astrophysics & exoplanet population research
+│   ├── stellar_population_by_spectral_class.md
+│   └── exoplanet_host_stars_by_spectral_class.md
 └── src/
     ├── vector.js       # Vector2 math library (add, sub, scale, dot, dist, normalize, angle)
     ├── celestial.js    # CelestialBody class (Keplerian orbits, axial spin, gravity well SOI, rings)
@@ -106,7 +110,13 @@ Orbital Puzzle/
     ├── rocket.js       # Spacecraft physics, fuel consumption, launch vector calculation, RCS thrusters
     ├── sound.js        # Procedural Web Audio API sound synthesizer (thrust rumble, chime chords)
     ├── levels.js       # 10 campaign level configurations across 2 tiers + Sandbox system builder
-    └── game.js         # Core GameEngine loop, decoupled update/render, camera pan/zoom, input handlers
+    ├── game.js         # Core GameEngine loop, decoupled update/render, camera pan/zoom, input handlers
+    └── galactic/       # Tier 1 Galactic Sector modules
+        ├── stellar_types.js    # 12 spectral classes, physical constants, colors, gameplay mechanics
+        ├── distribution.js    # Real-world vs Game-friendly models, continuous blend slider, PRNG
+        ├── galactic_sector.js # Procedural 2D sector generator with binary barycenters & galactic drift
+        ├── stellar_renderer.js# Specialized Canvas renderer (pulsar beams, accretion disks, photon rings)
+        └── galactic_demo.js   # Interactive demo app controller with RK4 test slingshot probe
 ```
 
 ### Key Technical Patterns:
@@ -119,18 +129,27 @@ Orbital Puzzle/
 
 ## 5. Hosting & Deployment
 
-- **GitHub Pages Deployment:**
-  Once pushed to GitHub, go to **Settings > Pages > Build and deployment > Source: Deploy from a branch (`main` / root)**.
-  The game will be live instantly at `https://jshart.github.io/orbital-puzzle/`.
+- **Live GitHub Pages Links:**
+  - **Main Game (Chapters 1–3 + Sandbox):** **[https://jshart.github.io/orbital-puzzle/](https://jshart.github.io/orbital-puzzle/)**
+  - **Tier 1 Galactic Sector Prototype:** **[https://jshart.github.io/orbital-puzzle/galactic_demo.html](https://jshart.github.io/orbital-puzzle/galactic_demo.html)**
+- **GitHub Pages Configuration:**
+  - Source: Deploy from branch (`main` / root).
+  - Automatically updates on each `git push origin main`.
 - **Local Testing:**
-  Run `python serve.py` from the root folder.
+  - `python serve.py` (opens main game at `http://localhost:8000/`)
+  - `python serve.py galactic_demo.html` (opens galactic demo at `http://localhost:8000/galactic_demo.html`)
 
 ---
 
-## 6. Future Expansion Roadmap (For Next Chat)
+## 6. Future Expansion Roadmap
 
-1. **Tier 1 (Galactic Sector Scale):**
-   - Add a high-level tier featuring binary star systems, black hole event horizons / gravitational lensing, and hyper-velocity slingshots.
+1. **Tier 1 (Galactic Sector Scale) Campaign Integration:**
+   - Integrate verified campaign levels 11–14 based on the vetted balanced distribution:
+     - Level 11: Binary Ballet (Alpha Centauri A & B / Contact Binary)
+     - Level 12: Pulsar Catapult (sweeping magnetic radiation beams)
+     - Level 13: Event Horizon Grazing (Cygnus X-1 Black Hole accretion disk)
+     - Level 14: Sagittarius A* Galactic Core Insertion
+   - Bring `Barycenter` into core `CelestialBody` hierarchy.
 2. **Engine Reuse for Alternative Genres:**
    - *Strategy / Supply Route Simulation:* Establishing stable periodic cargo orbits between planetary colonies.
    - *Exploration / Survey Mode:* Navigating unknown star clusters with fog-of-war gravity mapping.
@@ -139,3 +158,12 @@ Orbital Puzzle/
    - Particle plume glow variations and screen shake on high-thrust burns.
 4. **Interactive Level Editor:**
    - UI tool for placing custom planets, stars, and orbits, exportable to JSON or URL query strings for sharing.
+
+---
+
+## 7. Autonomous Execution & Server Launch Protocol (Operational Rule)
+
+> [!IMPORTANT]
+> **Always Launch & Link Dev Servers Automatically:**
+> - When creating, testing, or demonstrating code, prototypes, or demos, the AI assistant **must always automatically execute the command to launch the local development server** (`python serve.py [target]`) in the background as a daemon process.
+> - The assistant **must always present direct, clickable HTTP links** (e.g. `http://localhost:8000/galactic_demo.html` or `http://localhost:8000/`) so the user never has to manually start servers or switch terminal windows.

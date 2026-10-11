@@ -267,8 +267,12 @@
       const dt = Math.min(0.1, (currentTime - lastTime) / 1000);
       lastTime = currentTime;
 
-      app.update(dt);
-      app.render();
+      try {
+        app.update(dt);
+        app.render();
+      } catch (err) {
+        console.error("Continuum animation loop error:", err);
+      }
 
       requestAnimationFrame(loop);
     }

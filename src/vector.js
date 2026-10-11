@@ -88,4 +88,11 @@ export class Vector2 {
   static scale(v, s) {
     return new Vector2(v.x * s, v.y * s);
   }
+
+  static lerp(v1, v2, t) {
+    return new Vector2(
+      v1.x + (v2.x - v1.x) * t,
+      v1.y + (v2.y - v1.y) * t
+    );
+  }
 }

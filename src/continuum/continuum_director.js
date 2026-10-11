@@ -282,9 +282,9 @@ export class ContinuumDirector {
     // 3. Build Solar Scene with angle and heading preservation (scaled to 20 m/s transfer speed)
     this.solarScene = buildSolarScene(incomingAngle, headingAngle, 20.0);
 
-    // Center camera on Sol in Solar frame
-    this.camera.targetX = 0;
-    this.camera.targetY = 0;
+    // Camera stays firmly locked on target star position during transition
+    this.camera.targetX = targetStar.position.x;
+    this.camera.targetY = targetStar.position.y;
     this.camera.targetZoom = this.solarScene.defaultZoom;
 
     if (this.onStageChanged) {
@@ -294,6 +294,13 @@ export class ContinuumDirector {
 
   updateTransition1(dt) {
     this.transitionProgress += dt / this.transitionDuration;
+
+    // Keep galactic orbits advancing so stars continue moving during cross fade
+    this.galacticScene.sector.evaluateAtTime(this.totalTime);
+
+    const targetStar = this.galacticScene.targetStar;
+    this.camera.targetX = targetStar.position.x;
+    this.camera.targetY = targetStar.position.y;
 
     if (this.transitionProgress >= 1.0) {
       this.stage = STAGES.STAGE_2_SOLAR;
@@ -305,12 +312,12 @@ export class ContinuumDirector {
       this.probe.vel.copy(this.solarScene.probeStartVel);
       this.probe.heading = this.probe.vel.angle();
 
-      // Recenter camera on Sol
+      // Recenter camera on Sol (0, 0) in Solar coordinate space
       this.camera.x = 0;
       this.camera.y = 0;
-      this.camera.zoom = this.solarScene.defaultZoom;
       this.camera.targetX = 0;
       this.camera.targetY = 0;
+      this.camera.zoom = this.solarScene.defaultZoom;
       this.camera.targetZoom = this.solarScene.defaultZoom;
 
       if (this.onStageChanged) {
@@ -462,9 +469,9 @@ export class ContinuumDirector {
     // Build Planetary Scene (normalized to 18.0 m/s planetary capture entry speed)
     this.planetaryScene = buildPlanetaryScene(incomingAngle, headingAngle, 18.0);
 
-    // Camera targets Terra at origin in Planetary frame
-    this.camera.targetX = 0;
-    this.camera.targetY = 0;
+    // Camera stays firmly locked on Terra during transition
+    this.camera.targetX = terraPos.x;
+    this.camera.targetY = terraPos.y;
     this.camera.targetZoom = this.planetaryScene.defaultZoom;
 
     if (this.onStageChanged) {
@@ -474,6 +481,16 @@ export class ContinuumDirector {
 
   updateTransition2(dt) {
     this.transitionProgress += dt / this.transitionDuration;
+
+    // Keep solar bodies advancing during transition
+    for (const body of this.solarScene.bodies) {
+      body.evaluateAtTime(this.stageTime);
+    }
+
+    const terra = this.solarScene.targetPlanet;
+    const terraPos = terra.getPositionAtTime(this.stageTime);
+    this.camera.targetX = terraPos.x;
+    this.camera.targetY = terraPos.y;
 
     if (this.transitionProgress >= 1.0) {
       this.stage = STAGES.STAGE_3_PLANETARY;
@@ -485,12 +502,12 @@ export class ContinuumDirector {
       this.probe.vel.copy(this.planetaryScene.probeStartVel);
       this.probe.heading = this.probe.vel.angle();
 
-      // Center camera on Terra
+      // Recenter camera on Terra (0, 0) in Planetary coordinate space
       this.camera.x = 0;
       this.camera.y = 0;
-      this.camera.zoom = this.planetaryScene.defaultZoom;
       this.camera.targetX = 0;
       this.camera.targetY = 0;
+      this.camera.zoom = this.planetaryScene.defaultZoom;
       this.camera.targetZoom = this.planetaryScene.defaultZoom;
 
       if (this.onStageChanged) {

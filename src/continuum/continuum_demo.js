@@ -88,28 +88,32 @@ export class ContinuumDemoApp {
     } else if (stage === STAGES.TRANSITION_1_TO_SOLAR) {
       const p = this.director.transitionProgress;
       const tStar = this.director.galacticScene.targetStar;
-      // Shift Galactic scene so Sol Prime translates to (0, 0), perfectly aligning with Sol!
-      ctx.save();
-      ctx.translate(-tStar.position.x, -tStar.position.y);
-      this.renderGalacticScene(ctx, cam.zoom, 1.0 - p);
-      ctx.restore();
 
+      // 1. Galactic scene fades out, rendered at its native position
+      this.renderGalacticScene(ctx, cam.zoom, 1.0 - p);
+
+      // 2. Solar scene fades in, translated by tStar.position so Sol aligns seamlessly atop Sol Prime!
       if (this.director.solarScene) {
+        ctx.save();
+        ctx.translate(tStar.position.x, tStar.position.y);
         this.renderSolarScene(ctx, cam.zoom, p);
+        ctx.restore();
       }
     } else if (stage === STAGES.STAGE_2_SOLAR) {
       this.renderSolarScene(ctx, cam.zoom, 1.0);
     } else if (stage === STAGES.TRANSITION_2_TO_PLANETARY) {
       const p = this.director.transitionProgress;
       const terraPos = this.director.solarScene.targetPlanet.getPositionAtTime(this.director.stageTime);
-      // Shift Solar scene so Terra translates to (0, 0), perfectly aligning with Terra in Planetary scene!
-      ctx.save();
-      ctx.translate(-terraPos.x, -terraPos.y);
-      this.renderSolarScene(ctx, cam.zoom, 1.0 - p);
-      ctx.restore();
 
+      // 1. Solar scene fades out, rendered at its native position
+      this.renderSolarScene(ctx, cam.zoom, 1.0 - p);
+
+      // 2. Planetary scene fades in, translated by terraPos so Terra aligns seamlessly atop Terra in Solar scene!
       if (this.director.planetaryScene) {
+        ctx.save();
+        ctx.translate(terraPos.x, terraPos.y);
         this.renderPlanetaryScene(ctx, cam.zoom, p);
+        ctx.restore();
       }
     } else if (stage === STAGES.STAGE_3_PLANETARY || stage === STAGES.STAGE_4_COMPLETE) {
       this.renderPlanetaryScene(ctx, cam.zoom, 1.0);
@@ -221,12 +225,14 @@ export class ContinuumDemoApp {
       const tStar = this.director.galacticScene.targetStar;
       const relGalactic = Vector2.sub(probe.pos, tStar.position);
       const p = this.director.transitionProgress;
-      drawPos = Vector2.lerp(relGalactic, this.director.solarScene.probeStartPos, p);
+      const relProbe = Vector2.lerp(relGalactic, this.director.solarScene.probeStartPos, p);
+      drawPos = Vector2.add(tStar.position, relProbe);
     } else if (stage === STAGES.TRANSITION_2_TO_PLANETARY && this.director.planetaryScene) {
       const terraPos = this.director.solarScene.targetPlanet.getPositionAtTime(this.director.stageTime);
       const relSolar = Vector2.sub(probe.pos, terraPos);
       const p = this.director.transitionProgress;
-      drawPos = Vector2.lerp(relSolar, this.director.planetaryScene.probeStartPos, p);
+      const relProbe = Vector2.lerp(relSolar, this.director.planetaryScene.probeStartPos, p);
+      drawPos = Vector2.add(terraPos, relProbe);
     }
 
     // Trail

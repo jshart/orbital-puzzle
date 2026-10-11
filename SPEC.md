@@ -144,6 +144,21 @@ Orbital Puzzle/
   - **Stage 1 (Galactic):** Interstellar Guidance Controller (IGC) steers probe with lateral acceleration against Sagittarius Prime (SMBH mass 220,000) to reliably enter Sol Prime's SOI boundary ($R \le 135\text{ AU}$).
   - **Stage 2 (Solar):** Predictive Lead-Pursuit Mid-Course Correction (MCC) guides probe to Terra's future orbital position ($t_{\text{go}} = d_{\text{terra}} / v_{\text{probe}}$) with periapsis speed regulation ($v \le 24\text{ m/s}$) to guarantee Terra SOI entry ($R \le 65\text{ AU}$).
   - **Stage 3 (Planetary):** Terminal approach steering towards Station Alpha + target-relative RCS braking inside capture radius to achieve clamp docking lock ($v_{\text{rel}} \le 18\text{ m/s}$).
-* **Seamless Patched Conics Hand-Offs:**
+  - **Stage 4 (Terminal Docking & Celebration):** Live orbital rendering loop continues post-docking with pulsating clamp rings, debrief statistics modal, and restart capability.
+* **Focal-Centered Cross-Fade Transitions:**
   - Preserves exact relative entry angle $\theta_{\text{entry}} = \text{atan2}(y_{\text{probe}} - y_{\text{body}}, x_{\text{probe}} - x_{\text{body}})$ and velocity heading $\theta_{\text{vel}} = \text{atan2}(v_y, v_x)$ across scale transitions.
-  - Translates visual coordinate origins during cross-fades so destination celestial bodies remain anchored at the screen center without camera jump or angle discontinuity.
+  - Anchors destination celestial bodies (Sol Prime ➔ Sol at $(w/2, h/2)$; Terra ➔ Terra at $(w/2, h/2)$) in screen center during cross-fades, eliminating coordinate collisions and duplicate offset drawings.
+* **Continuous Subsystem Clocks:**
+  - Dedicated clocks (`this.solarTime` and `this.planetaryTime`) advance continuously during transitions, preventing celestial orbits from regressing backwards in time.
+
+---
+
+## 8. Automated Regression Test Suite
+* Zero-configuration automated test suite managed via `pytest` (`pytest.ini`):
+  1. `tests/test_vector.py`: Vector2 primitives, linear interpolation (`lerp`), and angle conversions.
+  2. `tests/test_celestial_eval.py`: Analytical Keplerian orbit positions and hierarchical parent-child transforms.
+  3. `tests/test_galactic_generation.py`: Mulberry32 PRNG reproducibility and 65-star sector structure.
+  4. `tests/test_continuum_transitions.py`: Entry angle conservation, predictive MCC guidance, and docking math.
+  5. `tests/test_continuum_e2e_cdp.py`: Headless Chrome DevTools Protocol (CDP) live end-to-end browser test verifying zero console exceptions, 3-tier traversal, and docking completion.
+* **Execution:** `python -m pytest` executes all 14 tests in $\approx 17\text{s}$ with 100% pass rate.
+

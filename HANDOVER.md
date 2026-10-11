@@ -147,37 +147,58 @@ Orbital Puzzle/
 
 ### 5.3 Multi-Scale Continuum Flight Demo Status:
 - ✅ **Stage 1 (Galactic Sector):** Camera remains centered on Sagittarius Prime (SMBH) with wide 65-system framing. The Interstellar Guidance Controller (IGC) steers probe with lateral ion burns against SMBH pull, reaching Sol Prime SOI in $25.7\text{s}$.
-- ✅ **Seamless Transition 1 ➔ 2:** Coordinate origins are aligned so Sol Prime transforms directly into Sol without camera jumps. Radial entry angle ($\approx 159^\circ$) and velocity heading ($\approx 4^\circ$) are strictly preserved.
+- ✅ **Seamless Focal Transition 1 ➔ 2:** Outgoing Galactic sector centers on Sol Prime at canvas center $(w/2, h/2)$ and incoming Solar scene centers on Sol $(0, 0)$ at canvas center $(w/2, h/2)$. The galactic cluster smoothly cross-fades into the solar system with zero coordinate collision, zero star overlap, and zero offset ghosting. Radial entry angle ($\approx 159^\circ$) and velocity heading ($\approx 4^\circ$) are strictly preserved.
 - ✅ **Stage 2 (Sol Interplanetary):** Predictive Lead-Pursuit MCC continuously guides the probe toward Terra's predicted orbital intercept position ($t_{\text{go}} = d_{\text{terra}} / v_{\text{probe}}$) while throttling speed ($v \le 24\text{ m/s}$) to prevent hyperbolic blowout around the Sun. Reaches Terra SOI in $9.6\text{s}$.
-- ✅ **Seamless Transition 2 ➔ 3:** Coordinate origins are aligned so Terra stays locked at the screen center. Preserves arrival vector into Terra's subsystem.
-- ✅ **Stage 3 (Terra & Luna):** Approach guidance lines up Station Alpha, followed by terminal target-relative RCS reverse thrust to scrub drift speed below $18\text{ m/s}$, docking into Station Alpha clamp lock in $3.3\text{s}$.
-- ✅ **Complete Journey Verified:** Total transit time $38.6\text{s}$ with 100% mathematical reproducibility across runs.
+- ✅ **Continuous Orbital Clocks & Seamless Transition 2 ➔ 3:** Subsystem clocks (`this.solarTime` and `this.planetaryTime`) advance continuously throughout transitions, preventing planetary orbits from regressing backwards in time. Solar scene centers on Terra at $(w/2, h/2)$ and Planetary scene centers on Terra $(0, 0)$ at $(w/2, h/2)$, cross-fading smoothly with Luna and Station Alpha fading into view.
+- ✅ **Stage 3 (Terra & Luna Subsystem):** Approach guidance lines up Station Alpha, followed by terminal target-relative RCS reverse thrust to scrub drift speed below $18\text{ m/s}$.
+- ✅ **Stage 4 (Terminal Docking & Celebration Loop):** When clamped at Station Alpha, the simulation maintains its active render loop: Terra and Station Alpha continue smooth orbital rotation, animated green docking clamp rings pulse around Station Alpha, and a victory debrief modal presents transit times and a "REPLAY JOURNEY" button.
+- ✅ **Complete Journey Verified:** Total transit time $\approx 38.6\text{s}$ with 100% mathematical reproducibility across runs.
 
 ---
 
-## 6. Future Expansion Roadmap
+## 6. Automated Regression Test Suite
 
-1. **Tier 1 (Galactic Sector Scale) Campaign Integration:**
-   - Integrate verified campaign levels 11–14 based on the vetted balanced distribution:
-     - Level 11: Binary Ballet (Alpha Centauri A & B / Contact Binary)
-     - Level 12: Pulsar Catapult (sweeping magnetic radiation beams)
-     - Level 13: Event Horizon Grazing (Cygnus X-1 Black Hole accretion disk)
-     - Level 14: Sagittarius A* Galactic Core Insertion
-   - Bring `Barycenter` into core `CelestialBody` hierarchy.
-2. **Engine Reuse for Alternative Genres:**
-   - *Strategy / Supply Route Simulation:* Establishing stable periodic cargo orbits between planetary colonies.
-   - *Exploration / Survey Mode:* Navigating unknown star clusters with fog-of-war gravity mapping.
-3. **Audio & Visual Polish:**
-   - Add an Audio Mute/Volume slider in the HUD.
-   - Particle plume glow variations and screen shake on high-thrust burns.
-4. **Interactive Level Editor:**
-   - UI tool for placing custom planets, stars, and orbits, exportable to JSON or URL query strings for sharing.
+An automated, zero-config test suite is configured with `pytest` (`pytest.ini`):
+
+| Test Module | Coverage | Status |
+| :--- | :--- | :--- |
+| `tests/test_vector.py` | Vector2 algebra, distance, angle calculation, and `lerp` | **100% PASSED (5/5)** |
+| `tests/test_celestial_eval.py` | Analytical Keplerian orbits and hierarchical moon transforms across time $t$ | **100% PASSED (3/3)** |
+| `tests/test_galactic_generation.py` | Mulberry32 PRNG determinism, 65-star sector, central SMBH at (0, 0), Sol Prime | **100% PASSED (2/2)** |
+| `tests/test_continuum_transitions.py` | Entry angle & heading preservation, MCC intercept simulation, terminal braking | **100% PASSED (3/3)** |
+| `tests/test_continuum_e2e_cdp.py` | **Headless Chrome CDP test**: boots real Chrome, verifies 0 console errors, verifies progression through all 3 tiers into terminal docking | **100% PASSED (1/1)** |
+
+**Running Tests:**
+```bash
+python -m pytest
+```
+*Full suite completes in $\approx 17\text{s}$ with 14 passed tests.*
 
 ---
 
-## 7. Autonomous Execution & Server Launch Protocol (Operational Rule)
+## 7. Next Session Starting Point: Transitioning from Demo to Actual Gameplay
+
+In this session, we proved out the multi-scale continuum pipeline (Tier 1 Galaxy ➔ Tier 2 Solar ➔ Tier 3 Moon) with deterministic transitions and zero visual artifacts.
+
+### Key Focus Areas for Next Session:
+1. **Player Control & Interaction Across Scales:**
+   - **Manual vs. Assisted Guidance:** Introduce player controls (flight vector adjustments, burn dials, ejection window selection) while retaining optional guidance assists (IGC / MCC flight directors).
+   - **$\Delta v$ / Fuel Budgeting:** Add fuel consumption mechanics across tiers, challenging players to chain slingshots (e.g. Ares / Zeus assists) to conserve propellant for final orbital insertion.
+2. **Gameplay Objectives & Level Structure:**
+   - **Continuum Mission Profiles:**
+     - *Interstellar Probe Deployment:* Launch from an outer star system, navigate the galactic core, and insert into a target star's planetary system.
+     - *Planetary Colonization / Supply Route:* Establishing efficient multi-scale trajectories with strict transit time and fuel constraints.
+     - *Extreme Environment Hazards:* Pulsar radiation cones, black hole accretion disk grazing, and asteroid field crossings.
+3. **Player-Controlled Scale Navigation:**
+   - Allow players to seamlessly zoom or pan between tiers during planning, inspecting planetary launch windows from the galactic map before initiating the mission.
+   - Interactive maneuver node placement across intermediate orbital transfer corridors.
+
+---
+
+## 8. Autonomous Execution & Server Launch Protocol (Operational Rule)
 
 > [!IMPORTANT]
 > **Always Launch & Link Dev Servers Automatically:**
 > - When creating, testing, or demonstrating code, prototypes, or demos, the AI assistant **must always automatically execute the command to launch the local development server** (`python serve.py [target]`) in the background as a daemon process.
-> - The assistant **must always present direct, clickable HTTP links** (e.g. `http://localhost:8000/galactic_demo.html` or `http://localhost:8000/`) so the user never has to manually start servers or switch terminal windows.
+> - The assistant **must always present direct, clickable HTTP links** (e.g. `http://localhost:8000/continuum_demo.html` or `http://localhost:8000/`) so the user never has to manually start servers or switch terminal windows.
+

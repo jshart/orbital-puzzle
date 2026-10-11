@@ -116,17 +116,19 @@ Orbital Puzzle/
 ├── serve.py            # Local Python dev server (supports target page argument)
 ├── README.md           # Documentation, quick start, verified solution table
 ├── SPEC.md             # This design & technical specification
-├── galactic_demo.html  # Tier 1 Galactic Sector distribution prototype
+├── galactic_demo.html   # Tier 1 Galactic Sector distribution prototype
+├── continuum_demo.html  # Multi-Scale Cosmic Continuum prototype (Galactic -> Solar -> Moon)
 └── src/
-    ├── celestial.js    # CelestialBody class (orbits, rotation, gravity, rings)
-    ├── game.js         # GameEngine loop, inputs, adaptive zoom, HUD sync
-    ├── levels.js       # 10 verified campaign levels + Sandbox builder
-    ├── physics.js      # RK4 integrator, ghost detection, time pips, sub-step interpolation
-    ├── rocket.js       # Rocket state machine, continuous RCS, target braking physics
-    ├── sound.js        # Procedural Web Audio API engine rumble & chord chimes
-    ├── vector.js       # 2D Vector math library
-    ├── waypoint.js     # Target waypoint class with SOI and relative velocity checks
-    └── galactic/       # Tier 1 Galactic Sector modules (distribution, renderer, sector generator)
+    ├── celestial.js     # CelestialBody class (orbits, rotation, gravity, rings)
+    ├── game.js          # GameEngine loop, inputs, adaptive zoom, HUD sync
+    ├── levels.js        # 10 verified campaign levels + Sandbox builder
+    ├── physics.js       # RK4 integrator, ghost detection, time pips, sub-step interpolation
+    ├── rocket.js        # Rocket state machine, continuous RCS, target braking physics
+    ├── sound.js         # Procedural Web Audio API engine rumble & chord chimes
+    ├── vector.js        # 2D Vector math library
+    ├── waypoint.js      # Target waypoint class with SOI and relative velocity checks
+    ├── galactic/        # Tier 1 Galactic Sector modules (distribution, renderer, sector generator)
+    └── continuum/       # Cosmic Continuum modules (director, scenes, scale transitions)
 
 ---
 

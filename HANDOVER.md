@@ -117,6 +117,10 @@ Orbital Puzzle/
         ├── galactic_sector.js # Procedural 2D sector generator with binary barycenters & galactic drift
         ├── stellar_renderer.js# Specialized Canvas renderer (pulsar beams, accretion disks, photon rings)
         └── galactic_demo.js   # Interactive demo app controller with RK4 test slingshot probe
+    └── continuum/       # Cosmic Continuum Multi-Scale modules
+        ├── continuum_scenes.js # 3-Tier scene configurations (Galactic, Solar, Planetary)
+        ├── continuum_director.js# State machine, patched-conics vector hand-off, auto-braking
+        └── continuum_demo.js   # Interactive application controller, cross-fades, audio chimes
 ```
 
 ### Key Technical Patterns:
@@ -131,13 +135,15 @@ Orbital Puzzle/
 
 - **Live GitHub Pages Links:**
   - **Main Game (Chapters 1–3 + Sandbox):** **[https://jshart.github.io/orbital-puzzle/](https://jshart.github.io/orbital-puzzle/)**
+  - **Cosmic Continuum Journey Prototype:** **[https://jshart.github.io/orbital-puzzle/continuum_demo.html](https://jshart.github.io/orbital-puzzle/continuum_demo.html)**
   - **Tier 1 Galactic Sector Prototype:** **[https://jshart.github.io/orbital-puzzle/galactic_demo.html](https://jshart.github.io/orbital-puzzle/galactic_demo.html)**
 - **GitHub Pages Configuration:**
   - Source: Deploy from branch (`main` / root).
   - Automatically updates on each `git push origin main`.
 - **Local Testing:**
   - `python serve.py` (opens main game at `http://localhost:8000/`)
-  - `python serve.py galactic_demo.html` (opens galactic demo at `http://localhost:8000/galactic_demo.html`)
+  - `python serve.py continuum_demo.html` (opens cosmic continuum journey at `http://localhost:8000/continuum_demo.html`)
+  - `python serve.py galactic_demo.html` (opens galactic sector demo at `http://localhost:8000/galactic_demo.html`)
 
 ---
 

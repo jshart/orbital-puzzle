@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Orbital Puzzle // Cosmic Continuum Demo</title>
+  <link rel="stylesheet" href="style.css">
+  <style>
+    /* Specialized Styles for the Cosmic Journey Continuum Demo */
+    .journey-stepper {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: rgba(15, 23, 42, 0.65);
+      border: 1px solid rgba(56, 189, 248, 0.3);
+      border-radius: 20px;
+      padding: 4px 14px;
+    }
+    .stepper-item {
+      font-size: 0.72rem;
+      font-weight: 700;
+      color: #64748b;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.3s ease;
+    }
+    .stepper-item.active {
+      color: #38bdf8;
+      text-shadow: 0 0 8px rgba(56, 189, 248, 0.6);
+    }
+    .stepper-item.completed {
+      color: #34d399;
+    }
+    .stepper-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #475569;
+      transition: all 0.3s ease;
+    }
+    .stepper-item.active .stepper-dot {
+      background: #38bdf8;
+      box-shadow: 0 0 8px #38bdf8;
+    }
+    .stepper-item.completed .stepper-dot {
+      background: #34d399;
+    }
+    .stepper-arrow {
+      color: #475569;
+      font-size: 0.68rem;
+    }
+
+    .telemetry-compact {
+      position: absolute;
+      top: 65px;
+      left: 18px;
+      width: 320px;
+      background: rgba(15, 23, 42, 0.75);
+      backdrop-filter: blur(12px);
+      border: 1px solid rgba(56, 189, 248, 0.3);
+      border-radius: 10px;
+      padding: 12px 14px;
+      z-index: 20;
+    }
+    .stage-title {
+      font-size: 0.85rem;
+      font-weight: bold;
+      color: #38bdf8;
+      margin-bottom: 2px;
+      letter-spacing: 0.5px;
+    }
+    .stage-desc {
+      font-size: 0.7rem;
+      color: #94a3b8;
+      margin-bottom: 10px;
+      line-height: 1.3;
+    }
+
+    .nav-pill {
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      color: #e2e8f0;
+      padding: 4px 10px;
+      border-radius: 4px;
+      font-size: 0.72rem;
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      transition: all 0.2s;
+    }
+    .nav-pill:hover {
+      background: rgba(56, 189, 248, 0.25);
+      border-color: #38bdf8;
+      color: #ffffff;
+    }
+  </style>
+</head>
+<body>
+  <!-- Canvas container for Continuous Multi-Scale simulation -->
+  <div id="canvas-container">
+    <canvas id="continuum-canvas"></canvas>
+  </div>
+
+  <!-- UI HUD Layer -->
+  <div class="ui-layer">
+    <!-- Top Bar -->
+    <header class="top-bar interactive">
+      <div class="brand">
+        <h1>ORBITAL PUZZLE</h1>
+        <span class="tag">COSMIC CONTINUUM</span>
+      </div>
+
+      <!-- Multi-Scale Stepper -->
+      <div class="journey-stepper">
+        <div class="stepper-item active" id="badge-tier-1">
+          <span class="stepper-dot"></span>
+          <span>1. GALACTIC</span>
+        </div>
+        <span class="stepper-arrow">➔</span>
+        <div class="stepper-item" id="badge-tier-2">
+          <span class="stepper-dot"></span>
+          <span>2. SOLAR SYSTEM</span>
+        </div>
+        <span class="stepper-arrow">➔</span>
+        <div class="stepper-item" id="badge-tier-3">
+          <span class="stepper-dot"></span>
+          <span>3. TERRA & LUNA</span>
+        </div>
+      </div>
+
+      <!-- Navigation links -->
+      <div style="display: flex; gap: 8px;">
+        <a href="index.html" class="nav-pill" title="Return to Campaign Missions">◀ MISSIONS</a>
+        <a href="galactic_demo.html" class="nav-pill" title="Open Galactic Sector Prototype">⭐ GALACTIC MAP</a>
+      </div>
+
+      <!-- Time Controls -->
+      <div class="time-bar">
+        <span class="clock-display" id="telemetry-time">T+00.0s</span>
+        <button class="time-btn" id="btn-pause">❚❚ PAUSE</button>
+        <button class="time-btn" data-speed="0.5">0.5×</button>
+        <button class="time-btn active" data-speed="1.0">1×</button>
+        <button class="time-btn" data-speed="2.0">2×</button>
+        <button class="time-btn" data-speed="5.0">5×</button>
+      </div>
+    </header>
+
+    <!-- Compact Floating Telemetry Panel -->
+    <aside class="telemetry-compact interactive">
+      <div class="stage-title" id="hud-stage-name">TIER 1: GALACTIC SECTOR</div>
+      <div class="stage-desc" id="hud-stage-desc">
+        Interstellar transit through star cluster ──▶ Sol Prime SOI entry
+      </div>
+
+      <div class="data-row">
+        <span class="data-label">Probe Speed:</span>
+        <span class="data-value" id="telemetry-speed" style="color: #facc15;">0.0 m/s</span>
+      </div>
+      <div class="data-row">
+        <span class="data-label">Target Distance:</span>
+        <span class="data-value" id="telemetry-dist" style="color: #38bdf8;">0 AU</span>
+      </div>
+      <div class="data-row">
+        <span class="data-label">Dominant Gravity:</span>
+        <span class="data-value" id="telemetry-grav">Interstellar Void</span>
+      </div>
+
+      <div style="display: flex; gap: 6px; margin-top: 10px;">
+        <button class="hud-btn" id="btn-restart" style="flex: 1; background: rgba(56, 189, 248, 0.2); border-color: #38bdf8; color: #38bdf8; font-size: 0.72rem;">↺ RESTART JOURNEY [R]</button>
+      </div>
+    </aside>
+
+    <!-- Bottom Controls -->
+    <footer class="bottom-console interactive">
+      <div style="font-size: 0.75rem; color: #94a3b8; display: flex; align-items: center; gap: 14px;">
+        <span>🚀 <strong>Automated Multi-Scale Flight:</strong> Watch seamless astronomical scale transitions in real-time</span>
+        <span>⚡ <strong>[SPACE]:</strong> Toggle Pause / Play</span>
+        <span>↺ <strong>[R]:</strong> Restart Journey</span>
+      </div>
+    </footer>
+  </div>
+
+  <!-- Victory / Debrief Modal -->
+  <div class="modal-overlay" id="debrief-modal">
+    <div class="modal-content" style="max-width: 520px;">
+      <h2 class="modal-title success" style="font-size: 1.3rem;">★ COSMIC CONTINUUM VERIFIED!</h2>
+      <p class="modal-desc" style="color: #cbd5e1; font-size: 0.85rem; margin-bottom: 14px;">
+        The probe successfully completed the full 3-Tier cosmic transition from the interstellar void, through the Sol solar system, into the Terra-Luna subsystem, and docked with Station Alpha.
+      </p>
+
+      <div style="background: rgba(0, 0, 0, 0.35); border-radius: 8px; padding: 12px; margin-bottom: 16px;">
+        <div class="data-row">
+          <span class="data-label">Tier 1 Galactic Transit:</span>
+          <span class="data-value" id="stat-transit-t1" style="color: #38bdf8;">0.0s</span>
+        </div>
+        <div class="data-row">
+          <span class="data-label">Tier 2 Solar Leap:</span>
+          <span class="data-value" id="stat-transit-t2" style="color: #38bdf8;">0.0s</span>
+        </div>
+        <div class="data-row">
+          <span class="data-label">Tier 3 Planetary Dock:</span>
+          <span class="data-value" id="stat-transit-t3" style="color: #38bdf8;">0.0s</span>
+        </div>
+        <div class="data-row" style="border-top: 1px solid rgba(255, 255, 255, 0.1); margin-top: 6px; padding-top: 6px;">
+          <span class="data-label" style="font-weight: bold; color: #facc15;">Total Journey Time:</span>
+          <span class="data-value" id="stat-total-time" style="color: #facc15; font-weight: bold;">0.0s</span>
+        </div>
+        <div class="data-row">
+          <span class="data-label">Slingshot Assists Chained:</span>
+          <span class="data-value" id="stat-assists-count" style="color: #34d399;">2 assists</span>
+        </div>
+      </div>
+
+      <div class="modal-actions">
+        <button class="modal-btn secondary" id="modal-replay-btn">REPLAY JOURNEY ↺</button>
+        <a href="index.html" class="modal-btn primary" style="text-decoration: none; text-align: center;">CAMPAIGN MISSIONS ▶</a>
+      </div>
+    </div>
+  </div>
+
+  <!-- Bootstrapping Script -->
+  <script type="module">
+    import { ContinuumDemoApp } from './src/continuum/continuum_demo.js';
+
+    const canvas = document.getElementById('continuum-canvas');
+    const app = new ContinuumDemoApp(canvas);
+    window.continuumApp = app;
+
+    // Time controls
+    const btnPause = document.getElementById('btn-pause');
+    btnPause.addEventListener('click', () => {
+      app.director.isPaused = !app.director.isPaused;
+      btnPause.innerText = app.director.isPaused ? '▶ RESUME' : '❚❚ PAUSE';
+      btnPause.classList.toggle('active', app.director.isPaused);
+    });
+
+    document.querySelectorAll('.time-btn[data-speed]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.time-btn[data-speed]').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        app.director.timeScale = parseFloat(btn.dataset.speed);
+      });
+    });
+
+    // Restart button
+    document.getElementById('btn-restart').addEventListener('click', () => {
+      app.restartJourney();
+      btnPause.innerText = '❚❚ PAUSE';
+      btnPause.classList.remove('active');
+    });
+
+    document.getElementById('modal-replay-btn').addEventListener('click', () => {
+      app.restartJourney();
+      btnPause.innerText = '❚❚ PAUSE';
+      btnPause.classList.remove('active');
+    });
+
+    // Main animation loop
+    let lastTime = performance.now();
+    function loop(currentTime) {
+      const dt = Math.min(0.1, (currentTime - lastTime) / 1000);
+      lastTime = currentTime;
+
+      app.update(dt);
+      app.render();
+
+      requestAnimationFrame(loop);
+    }
+    requestAnimationFrame(loop);
+  </script>
+</body>
+</html>

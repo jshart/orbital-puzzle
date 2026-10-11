@@ -1,7 +1,7 @@
 /**
  * Continuum Multi-Scale Demo - Interactive Application Controller
- * Coordinates Canvas rendering, multi-tier cross-fading, HUD updates,
- * audio chimes, and victory debrief.
+ * Coordinates Canvas rendering of full 65-star sector (central SMBH),
+ * planetary orbits, cross-fades, guidance status HUD, and audio chimes.
  */
 
 import { ContinuumDirector, STAGES } from './continuum_director.js';
@@ -79,9 +79,9 @@ export class ContinuumDemoApp {
     ctx.scale(cam.zoom, cam.zoom);
     ctx.translate(-cam.x, -cam.y);
 
-    // Render active celestial scene based on director stage
     const stage = this.director.stage;
 
+    // Render active celestial scene based on director stage
     if (stage === STAGES.STAGE_1_GALACTIC) {
       this.renderGalacticScene(ctx, cam.zoom, 1.0);
     } else if (stage === STAGES.TRANSITION_1_TO_SOLAR) {
@@ -109,7 +109,7 @@ export class ContinuumDemoApp {
 
     ctx.restore();
 
-    // Render cinematic overlay transitions if in transition
+    // Render transition banner if in transition
     if (stage === STAGES.TRANSITION_1_TO_SOLAR || stage === STAGES.TRANSITION_2_TO_PLANETARY) {
       this.renderTransitionBanner(ctx, w, h);
     }
@@ -118,35 +118,34 @@ export class ContinuumDemoApp {
   renderGalacticScene(ctx, zoom, alpha) {
     if (alpha <= 0.01) return;
     const scene = this.director.galacticScene;
-    if (!scene) return;
+    if (!scene || !scene.sector) return;
 
     ctx.save();
     ctx.globalAlpha = alpha;
     const invZoom = 1 / Math.max(0.01, zoom);
 
-    // Binary barycenter dashed track
-    ctx.beginPath();
-    ctx.arc(scene.barycenterPos.x, scene.barycenterPos.y, 42, 0, Math.PI * 2);
-    ctx.strokeStyle = 'rgba(148, 163, 184, 0.2)';
-    ctx.lineWidth = 1 * invZoom;
-    ctx.setLineDash([3 * invZoom, 6 * invZoom]);
-    ctx.stroke();
+    // 1. Draw entire 65-Star Galactic Sector with Central SMBH & Binary Tracks!
+    this.stellarRenderer.drawSector(ctx, scene.sector, this.director.totalTime, {
+      zoom,
+      showBinaryOrbits: true,
+      showGravityWells: true,
+      showLabels: this.showLabels
+    });
 
-    // Render all stars
-    for (const star of scene.stars) {
-      this.stellarRenderer.drawStar(ctx, star, this.director.totalTime, zoom, {
-        showGravityWells: true,
-        showLabels: this.showLabels
-      });
-    }
-
-    // Highlight target star capture SOI ring
+    // 2. Highlight target star Sol Prime's SOI capture boundary
+    const tStar = scene.targetStar;
     ctx.beginPath();
-    ctx.arc(scene.targetStar.position.x, scene.targetStar.position.y, scene.targetStar.soiRadius, 0, Math.PI * 2);
-    ctx.strokeStyle = 'rgba(52, 211, 153, 0.55)';
-    ctx.lineWidth = 1.5 * invZoom;
+    ctx.arc(tStar.position.x, tStar.position.y, tStar.soiRadius, 0, Math.PI * 2);
+    ctx.strokeStyle = 'rgba(52, 211, 153, 0.75)';
+    ctx.lineWidth = 1.8 * invZoom;
     ctx.setLineDash([4 * invZoom, 6 * invZoom]);
     ctx.stroke();
+
+    // Pulsing target beacon label
+    ctx.font = `bold ${Math.max(9, Math.round(11 * invZoom))}px "JetBrains Mono", monospace`;
+    ctx.fillStyle = '#34d399';
+    ctx.textAlign = 'center';
+    ctx.fillText('TARGET SYSTEM: SOL PRIME', tStar.position.x, tStar.position.y - tStar.soiRadius - 10 * invZoom);
 
     ctx.restore();
   }
@@ -192,7 +191,7 @@ export class ContinuumDemoApp {
 
     // Draw Station Alpha Waypoint
     scene.targetWaypoint.draw(ctx, t, {
-      insideSOI: this.director.probe.pos.dist(scene.targetWaypoint.position) <= scene.targetWaypoint.captureRadius * 1.5,
+      insideSOI: this.director.probe.pos.dist(scene.targetWaypoint.position) <= scene.targetWaypoint.captureRadius * 1.8,
       canCapture: true,
       zoom
     });
@@ -234,26 +233,40 @@ export class ContinuumDemoApp {
     ctx.translate(probe.pos.x, probe.pos.y);
     ctx.rotate(probe.heading);
 
-    // Active Thruster Jet Plume if Braking
-    if (probe.activeTrim === 'BRAKE') {
+    // Active Thruster Jet Plume if Burning
+    if (probe.activeTrim === 'MCC') {
+      // High-intensity trailing ion plume (cyan)
+      const plumeLen = 20 * invZoom + Math.random() * 10 * invZoom;
       ctx.beginPath();
-      ctx.moveTo(2, -4);
-      ctx.lineTo(8 + Math.random() * 8, -12);
-      ctx.lineTo(0, -6);
+      ctx.moveTo(-5 * invZoom, -3 * invZoom);
+      ctx.lineTo(-plumeLen, 0);
+      ctx.lineTo(-5 * invZoom, 3 * invZoom);
       ctx.closePath();
-      ctx.fillStyle = '#f43f5e';
+      ctx.fillStyle = '#38bdf8';
+      ctx.shadowColor = '#38bdf8';
+      ctx.shadowBlur = 10;
+      ctx.fill();
+      ctx.shadowBlur = 0;
+    } else if (probe.activeTrim === 'BRAKE') {
+      // High-intensity reverse side braking jets (amber/red)
+      ctx.beginPath();
+      ctx.moveTo(2 * invZoom, -4 * invZoom);
+      ctx.lineTo(8 * invZoom + Math.random() * 8 * invZoom, -12 * invZoom);
+      ctx.lineTo(0, -6 * invZoom);
+      ctx.closePath();
+      ctx.fillStyle = '#f59e0b';
       ctx.fill();
 
       ctx.beginPath();
-      ctx.moveTo(2, 4);
-      ctx.lineTo(8 + Math.random() * 8, 12);
-      ctx.lineTo(0, 6);
+      ctx.moveTo(2 * invZoom, 4 * invZoom);
+      ctx.lineTo(8 * invZoom + Math.random() * 8 * invZoom, 12 * invZoom);
+      ctx.lineTo(0, 6 * invZoom);
       ctx.closePath();
-      ctx.fillStyle = '#f43f5e';
+      ctx.fillStyle = '#f59e0b';
       ctx.fill();
     }
 
-    // Hull
+    // Fuselage Hull
     ctx.beginPath();
     ctx.moveTo(11 * invZoom, 0);
     ctx.lineTo(-7 * invZoom, -5 * invZoom);
@@ -272,7 +285,7 @@ export class ContinuumDemoApp {
   renderTransitionBanner(ctx, w, h) {
     const isTrans1 = this.director.stage === STAGES.TRANSITION_1_TO_SOLAR;
     ctx.save();
-    ctx.fillStyle = 'rgba(15, 23, 42, 0.4)';
+    ctx.fillStyle = 'rgba(15, 23, 42, 0.55)';
     ctx.fillRect(0, 72, w, 44);
 
     ctx.font = 'bold 13px "JetBrains Mono", monospace';
@@ -288,7 +301,7 @@ export class ContinuumDemoApp {
   }
 
   drawBackgroundGrid(ctx, cam) {
-    const gridSize = 120 * cam.zoom;
+    const gridSize = 140 * cam.zoom;
     const offsetX = (this.canvas.width / 2 - cam.x * cam.zoom) % gridSize;
     const offsetY = (this.canvas.height / 2 - cam.y * cam.zoom) % gridSize;
 
@@ -324,18 +337,18 @@ export class ContinuumDemoApp {
     if (stage === STAGES.STAGE_1_GALACTIC || stage === STAGES.TRANSITION_1_TO_SOLAR) {
       badge1.classList.add('active');
       stageNameEl.innerText = 'TIER 1: GALACTIC SECTOR';
-      stageDescEl.innerText = 'Interstellar transit through star cluster ──▶ Sol Prime SOI entry';
+      stageDescEl.innerText = 'Galactic core (Sagittarius Prime) ──▶ Interstellar transit ──▶ Sol Prime';
     } else if (stage === STAGES.STAGE_2_SOLAR || stage === STAGES.TRANSITION_2_TO_PLANETARY) {
       badge1.classList.add('completed');
       badge2.classList.add('active');
       stageNameEl.innerText = 'TIER 2: SOL INTERPLANETARY SYSTEM';
-      stageDescEl.innerText = 'Outer boundary entry ──▶ Mars gravity assist ──▶ Terra descent';
+      stageDescEl.innerText = 'Interstellar insertion ──▶ Mid-Course Guidance Burn ──▶ Terra descent';
     } else if (stage === STAGES.STAGE_3_PLANETARY || stage === STAGES.STAGE_4_COMPLETE) {
       badge1.classList.add('completed');
       badge2.classList.add('completed');
       badge3.classList.add('active');
       stageNameEl.innerText = 'TIER 3: TERRA & LUNA SUBSYSTEM';
-      stageDescEl.innerText = 'Lunar clearance ──▶ Automated target braking ──▶ Station Alpha dock';
+      stageDescEl.innerText = 'Orbital insertion ──▶ Automated target braking ──▶ Station Alpha dock';
     }
   }
 
@@ -344,11 +357,16 @@ export class ContinuumDemoApp {
     const speedEl = document.getElementById('telemetry-speed');
     const distEl = document.getElementById('telemetry-dist');
     const gravEl = document.getElementById('telemetry-grav');
+    const guidanceEl = document.getElementById('telemetry-guidance');
     const timeEl = document.getElementById('telemetry-time');
 
     if (speedEl) speedEl.innerText = `${stats.currentSpeed.toFixed(1)} m/s`;
     if (distEl) distEl.innerText = `${Math.round(stats.targetDist)} AU`;
     if (gravEl) gravEl.innerText = stats.activeGravityWell;
+    if (guidanceEl) {
+      guidanceEl.innerText = stats.guidanceStatus;
+      guidanceEl.style.color = stats.guidanceStatus.includes('ACTIVE') || stats.guidanceStatus.includes('BRAKING') ? '#f59e0b' : '#34d399';
+    }
     if (timeEl) timeEl.innerText = `T+${this.director.totalTime.toFixed(1)}s`;
   }
 
@@ -361,7 +379,6 @@ export class ContinuumDemoApp {
     document.getElementById('stat-transit-t2').innerText = `${stats.transitTimes.t2.toFixed(1)}s`;
     document.getElementById('stat-transit-t3').innerText = `${stats.transitTimes.t3.toFixed(1)}s`;
     document.getElementById('stat-total-time').innerText = `${this.director.totalTime.toFixed(1)}s`;
-    document.getElementById('stat-assists-count').innerText = `${stats.assistsTriggered} chained assists`;
   }
 
   closeVictoryModal() {
@@ -375,7 +392,6 @@ export class ContinuumDemoApp {
   }
 
   setupInputs() {
-    // Keyboard controls
     window.addEventListener('keydown', (e) => {
       if (e.code === 'Space') {
         e.preventDefault();

@@ -1,95 +1,70 @@
 /**
  * Continuum Multi-Scale Demo - Scene Configurations (Tiers 1, 2, and 3)
- * Provides deterministic celestial setups for each scale tier:
- * Tier 1: Galactic Sector with binary assist star & target star
- * Tier 2: Interplanetary Solar System with star, Ares slingshot, and Terra
- * Tier 3: Planetary Subsystem with Terra, Luna, and Station Alpha
+ * Full 65-Star Galactic Sector (Central SMBH at 0, 0) -> Sol System -> Terra Subsystem
  */
 
 import { Vector2 } from '../vector.js';
 import { CelestialBody } from '../celestial.js';
 import { Waypoint } from '../waypoint.js';
+import { GalacticSector } from '../galactic/galactic_sector.js';
 import { STELLAR_CLASSES } from '../galactic/stellar_types.js';
 
 /**
- * Builds Tier 1: Galactic Sector Scale
+ * Builds Tier 1: Full Galactic Sector Scale
+ * Uses authentic GalacticSector with central Sagittarius Prime (SMBH) at (0, 0)
  */
 export function buildGalacticScene() {
-  const targetStar = {
-    id: 'star-sol-prime',
-    name: 'Sol Prime (Target Star)',
-    stellarClass: STELLAR_CLASSES.G_TYPE,
-    position: new Vector2(360, 140),
-    mass: 38000,
-    radius: 24,
-    soiRadius: 130, // Trigger boundary for transition to Solar System
-    color: STELLAR_CLASSES.G_TYPE.color,
-    glowColor: STELLAR_CLASSES.G_TYPE.coronaColor,
-    isTarget: true
-  };
+  const sector = new GalacticSector({
+    seed: 1042,
+    starCount: 65,
+    sectorRadius: 1600,
+    blendFactor: 1.0,
+    includeCoreAnchor: true
+  });
 
-  // Intermediate Binary Assist Pair
-  const barycenterPos = new Vector2(-180, 360);
-  const binarySeparation = 70;
-  const starA = {
-    id: 'star-sirius-a',
-    name: 'Sirius Alpha (Assist)',
-    stellarClass: STELLAR_CLASSES.A_TYPE,
-    position: new Vector2(barycenterPos.x - binarySeparation * 0.4, barycenterPos.y),
-    mass: 42000,
-    radius: 28,
-    soiRadius: 90,
-    color: STELLAR_CLASSES.A_TYPE.color,
-    glowColor: STELLAR_CLASSES.A_TYPE.coronaColor
-  };
+  // Find or designate a prominent Class G star in the sector to be Sol Prime
+  let targetStar = sector.stars.find(s => !s.isCoreAnchor && !s.isBinary && s.stellarClass.id === 'G_TYPE');
+  if (!targetStar) {
+    targetStar = sector.stars.find(s => !s.isCoreAnchor && !s.isBinary) || sector.stars[1];
+  }
 
-  const starB = {
-    id: 'star-sirius-b',
-    name: 'Sirius Beta (White Dwarf)',
-    stellarClass: STELLAR_CLASSES.WHITE_DWARF,
-    position: new Vector2(barycenterPos.x + binarySeparation * 0.6, barycenterPos.y),
-    mass: 24000,
-    radius: 8,
-    soiRadius: 65,
-    color: STELLAR_CLASSES.WHITE_DWARF.color,
-    glowColor: STELLAR_CLASSES.WHITE_DWARF.coronaColor
-  };
+  // Configure target star properties for clean transition
+  targetStar.name = 'Sol Prime (Target Star)';
+  targetStar.isTarget = true;
+  targetStar.soiRadius = 135; // Capture trigger boundary
 
-  // Background stars for visual depth & subtle ambient gravity
-  const bgStars = [
-    { id: 'bg-1', name: 'Vega Borealis', stellarClass: STELLAR_CLASSES.B_TYPE, position: new Vector2(-650, -320), mass: 55000, radius: 34, soiRadius: 120, color: STELLAR_CLASSES.B_TYPE.color, glowColor: STELLAR_CLASSES.B_TYPE.coronaColor },
-    { id: 'bg-2', name: 'Cygnus X-1 (Black Hole)', stellarClass: STELLAR_CLASSES.BLACK_HOLE, position: new Vector2(620, -480), mass: 90000, radius: 10, soiRadius: 110, color: '#000000', glowColor: 'rgba(245, 158, 11, 0.4)', hasAccretionDisk: true },
-    { id: 'bg-3', name: 'Proxima Australis', stellarClass: STELLAR_CLASSES.M_TYPE, position: new Vector2(-420, 580), mass: 11000, radius: 14, soiRadius: 60, color: STELLAR_CLASSES.M_TYPE.color, glowColor: STELLAR_CLASSES.M_TYPE.coronaColor },
-    { id: 'bg-4', name: 'Pulsar PSR-0950', stellarClass: STELLAR_CLASSES.PULSAR, position: new Vector2(580, 520), mass: 45000, radius: 6, soiRadius: 80, color: '#38bdf8', glowColor: 'rgba(56, 189, 248, 0.6)', hasMagneticBeams: true },
-    { id: 'bg-5', name: 'Antares Prime (Giant)', stellarClass: STELLAR_CLASSES.RED_GIANT, position: new Vector2(-780, 180), mass: 35000, radius: 48, soiRadius: 100, color: STELLAR_CLASSES.RED_GIANT.color, glowColor: STELLAR_CLASSES.RED_GIANT.coronaColor },
-    { id: 'bg-6', name: 'Kepler-442 (Goldilocks)', stellarClass: STELLAR_CLASSES.K_TYPE, position: new Vector2(120, -560), mass: 18000, radius: 18, soiRadius: 70, color: STELLAR_CLASSES.K_TYPE.color, glowColor: STELLAR_CLASSES.K_TYPE.coronaColor }
-  ];
-
-  const allStars = [targetStar, starA, starB, ...bgStars];
-
-  // Starting probe coordinates in deep interstellar space
-  const probeStartPos = new Vector2(-820, 680);
-  const probeStartVel = new Vector2(28.5, -12.8); // Aimed past Sirius binary for gravity assist into Sol Prime
+  // Probe starts in an outer spiral arm heading inward across the disk
+  // Positioned so it naturally flies through the cluster toward Sol Prime
+  const probeStartPos = new Vector2(
+    targetStar.position.x - 920,
+    targetStar.position.y + 480
+  );
+  
+  // Vector pointing toward Sol Prime with a slight hyperbolic offset for a binary flyby
+  const dirToTarget = Vector2.sub(targetStar.position, probeStartPos).normalize();
+  const probeStartVel = Vector2.scale(dirToTarget, 28.5);
+  // Add a slight orthogonal tangent so it slingshots past nearby stars
+  probeStartVel.x += 3.5;
+  probeStartVel.y -= 2.0;
 
   return {
     tier: 1,
     name: 'TIER 1: GALACTIC SECTOR',
-    subtitle: 'Interstellar Transit ──▶ Target Star Sol Prime',
-    stars: allStars,
+    subtitle: 'Galactic Core (Sagittarius Prime) ──▶ Interstellar Transit ──▶ Sol Prime',
+    sector,
     targetStar,
-    barycenterPos,
-    binaryStars: [starA, starB],
     probeStartPos,
     probeStartVel,
-    defaultZoom: 0.38,
-    targetZoom: 0.75
+    defaultZoom: 0.25, // Zoomed out to show the full galaxy and central black hole!
+    initialCameraCenter: new Vector2(0, 0) // Centers directly on the central Supermassive Black Hole
   };
 }
 
 /**
  * Builds Tier 2: Interplanetary Solar System Scale
+ * Accurately initialized from Galactic entry angle and heading
  */
-export function buildSolarScene(incomingAngle = -2.6, incomingSpeed = 24.0) {
+export function buildSolarScene(incomingAngle = 2.6, headingAngle = -0.5, incomingSpeed = 24.0) {
   const sol = new CelestialBody({
     id: 'sol-star-t2',
     name: 'Sol (Star)',
@@ -114,13 +89,13 @@ export function buildSolarScene(incomingAngle = -2.6, incomingSpeed = 24.0) {
     color: '#38bdf8',
     glowColor: 'rgba(56, 189, 248, 0.4)'
   });
-  terra.soiRadius = 65; // Trigger boundary for transition to Terra subsystem
+  terra.soiRadius = 65; // Capture trigger boundary
 
   const ares = new CelestialBody({
     id: 'ares-planet-t2',
-    name: 'Ares (Slingshot Assist)',
+    name: 'Ares (Mars Analog)',
     parent: sol,
-    mass: 3600,
+    mass: 3800,
     radius: 13,
     orbitRadius: 325,
     orbitSpeed: 0.046,
@@ -146,36 +121,40 @@ export function buildSolarScene(incomingAngle = -2.6, incomingSpeed = 24.0) {
 
   const allBodies = [sol, ares, terra, zeus];
 
-  // Calculate entry position on the outer solar boundary (R ~ 480 AU) based on incoming angle
-  const entryRadius = 490;
+  // Exact entry position on outer solar boundary (R = 480 AU) using incomingAngle
+  const entryRadius = 480;
   const probeStartPos = new Vector2(
     Math.cos(incomingAngle) * entryRadius,
     Math.sin(incomingAngle) * entryRadius
   );
 
-  // Inward hyperbolic velocity vector
-  const inwardDir = new Vector2(-Math.cos(incomingAngle + 0.18), -Math.sin(incomingAngle + 0.18)).normalize();
-  const probeStartVel = Vector2.scale(inwardDir, incomingSpeed);
+  // Exact entry velocity vector pointing in direction of headingAngle
+  const speed = Math.max(22.0, Math.min(30.0, incomingSpeed));
+  const probeStartVel = new Vector2(
+    Math.cos(headingAngle) * speed,
+    Math.sin(headingAngle) * speed
+  );
 
   return {
     tier: 2,
     name: 'TIER 2: SOL INTERPLANETARY SYSTEM',
-    subtitle: 'Outer Solar Insertion ──▶ Mars Slingshot ──▶ Terra Descent',
+    subtitle: 'Interstellar Insertion ──▶ Mid-Course Guidance Burn ──▶ Terra Descent',
     bodies: allBodies,
     centralStar: sol,
     targetPlanet: terra,
     aresAssist: ares,
     probeStartPos,
     probeStartVel,
-    defaultZoom: 0.68,
+    defaultZoom: 0.65,
     targetZoom: 1.15
   };
 }
 
 /**
  * Builds Tier 3: Planetary & Moon Subsystem Scale
+ * Accurately initialized from Solar entry angle and heading
  */
-export function buildPlanetaryScene(incomingAngle = -1.9, incomingSpeed = 22.0) {
+export function buildPlanetaryScene(incomingAngle = -1.9, headingAngle = 1.2, incomingSpeed = 22.0) {
   const terra = new CelestialBody({
     id: 'terra-t3',
     name: 'Terra',
@@ -213,21 +192,24 @@ export function buildPlanetaryScene(incomingAngle = -1.9, incomingSpeed = 22.0) 
 
   const allBodies = [terra, luna];
 
-  // Entry position on the outer planetary boundary (R ~ 140 AU)
-  const entryRadius = 135;
+  // Entry position on the outer planetary boundary (R = 140 AU)
+  const entryRadius = 140;
   const probeStartPos = new Vector2(
     Math.cos(incomingAngle) * entryRadius,
     Math.sin(incomingAngle) * entryRadius
   );
 
-  // Hyperbolic approach vector towards Station Alpha
-  const inwardDir = new Vector2(-Math.cos(incomingAngle + 0.35), -Math.sin(incomingAngle + 0.35)).normalize();
-  const probeStartVel = Vector2.scale(inwardDir, incomingSpeed);
+  // Entry velocity matching headingAngle
+  const speed = Math.max(18.0, Math.min(24.0, incomingSpeed));
+  const probeStartVel = new Vector2(
+    Math.cos(headingAngle) * speed,
+    Math.sin(headingAngle) * speed
+  );
 
   return {
     tier: 3,
     name: 'TIER 3: TERRA & LUNA SUBSYSTEM',
-    subtitle: 'Lunar Gap Clearance ──▶ RCS Braking ──▶ Station Alpha Docking',
+    subtitle: 'Orbital Insertion ──▶ Automated RCS Target Braking ──▶ Station Alpha Docking',
     bodies: allBodies,
     primaryPlanet: terra,
     luna,

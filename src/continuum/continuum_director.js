@@ -1,7 +1,7 @@
 /**
  * Continuum Multi-Scale Demo - State Machine & Cosmic Scale Director
- * Governs the automated progression from Tier 1 Galactic Sector ->
- * Tier 2 Solar System -> Tier 3 Planetary System -> Station Docking.
+ * Fully integrated with 65-star GalacticSector (Central SMBH),
+ * angle-preserving patched conics, and autonomous Mid-Course Guidance (MCC).
  */
 
 import { Vector2 } from '../vector.js';
@@ -28,22 +28,23 @@ export class ContinuumDirector {
     this.camera = {
       x: 0,
       y: 0,
-      zoom: 0.38,
+      zoom: 0.25,
       targetX: 0,
       targetY: 0,
-      targetZoom: 0.38
+      targetZoom: 0.25
     };
 
     // Transition State
-    this.transitionProgress = 0; // 0 to 1
-    this.transitionDuration = 2.0; // seconds
+    this.transitionProgress = 0;
+    this.transitionDuration = 2.0;
 
     // Probe Physics State
     this.probe = {
       pos: new Vector2(0, 0),
       vel: new Vector2(0, 0),
       heading: 0,
-      activeTrim: null, // 'BRAKE' | null
+      activeTrim: null, // 'MCC' | 'BRAKE' | null
+      burnDirection: new Vector2(0, 0),
       isDocked: false
     };
     this.trail = [];
@@ -53,9 +54,9 @@ export class ContinuumDirector {
     this.stats = {
       currentSpeed: 0,
       targetDist: 0,
-      activeGravityWell: 'Interstellar Void',
+      activeGravityWell: 'Sagittarius Prime (SMBH)',
       gravityPull: 0,
-      assistsTriggered: 0,
+      guidanceStatus: 'COASTING',
       transitTimes: { t1: 0, t2: 0, t3: 0 }
     };
 
@@ -79,13 +80,13 @@ export class ContinuumDirector {
     this.transitionProgress = 0;
     this.trail = [];
     this.particles = [];
-    this.stats.assistsTriggered = 0;
     this.stats.transitTimes = { t1: 0, t2: 0, t3: 0 };
+    this.stats.guidanceStatus = 'COASTING';
 
     // Build Scenes
     this.galacticScene = buildGalacticScene();
-    this.solarScene = null; // Instantiated on transition
-    this.planetaryScene = null; // Instantiated on transition
+    this.solarScene = null;
+    this.planetaryScene = null;
 
     // Initialize Probe for Stage 1
     this.probe.pos.copy(this.galacticScene.probeStartPos);
@@ -94,13 +95,14 @@ export class ContinuumDirector {
     this.probe.activeTrim = null;
     this.probe.isDocked = false;
 
-    // Camera starts centered between probe and target star
-    this.camera.x = -200;
-    this.camera.y = 400;
-    this.camera.zoom = 0.38;
-    this.camera.targetX = -200;
-    this.camera.targetY = 400;
-    this.camera.targetZoom = 0.38;
+    // Camera starts centered on the central Supermassive Black Hole at (0, 0)
+    // with wide field of view showing the entire 65-star galaxy!
+    this.camera.x = 0;
+    this.camera.y = 0;
+    this.camera.zoom = 0.24;
+    this.camera.targetX = 0;
+    this.camera.targetY = 0;
+    this.camera.targetZoom = 0.24;
 
     if (this.onStageChanged) {
       this.onStageChanged(this.stage, this.galacticScene);
@@ -151,24 +153,35 @@ export class ContinuumDirector {
   }
 
   // -------------------------------------------------------------
-  // STAGE 1: GALACTIC SECTOR
+  // STAGE 1: FULL GALACTIC SECTOR
   // -------------------------------------------------------------
   updateGalacticStage(dt) {
     const scene = this.galacticScene;
+    const sector = scene.sector;
     const G = 1.0;
     const eps = 8.0;
 
-    // Camera smoothly follows mid-point between probe and target star
-    this.camera.targetX = this.probe.pos.x * 0.45 + scene.targetStar.position.x * 0.55;
-    this.camera.targetY = this.probe.pos.y * 0.45 + scene.targetStar.position.y * 0.55;
-    this.camera.targetZoom = 0.38;
+    // Evaluate galactic orbits (stars and barycenters move continuously)
+    sector.evaluateAtTime(this.totalTime);
 
-    // Compute net gravity from all galactic stars
+    // Dynamic Camera Tracking:
+    // Starts centered at the core SMBH (0, 0), and progressively shifts to framing
+    // between probe and Sol Prime as probe approaches target
+    const targetStar = scene.targetStar;
+    const probeProgress = Math.min(1.0, this.stageTime / 18.0);
+    const focusX = 0 * (1 - probeProgress) + (this.probe.pos.x * 0.4 + targetStar.position.x * 0.6) * probeProgress;
+    const focusY = 0 * (1 - probeProgress) + (this.probe.pos.y * 0.4 + targetStar.position.y * 0.6) * probeProgress;
+    
+    this.camera.targetX = focusX;
+    this.camera.targetY = focusY;
+    this.camera.targetZoom = 0.24 + probeProgress * 0.18; // Gently zooms in from 0.24x to 0.42x
+
+    // Compute net gravity from all 65 stars + Central Supermassive Black Hole
     const acc = new Vector2(0, 0);
     let maxPull = 0;
-    let dominantName = 'Interstellar Void';
+    let dominantName = 'Sagittarius Prime (SMBH)';
 
-    for (const star of scene.stars) {
+    for (const star of sector.stars) {
       const dx = star.position.x - this.probe.pos.x;
       const dy = star.position.y - this.probe.pos.y;
       const dSq = dx * dx + dy * dy;
@@ -187,22 +200,22 @@ export class ContinuumDirector {
 
     this.stats.activeGravityWell = dominantName;
     this.stats.gravityPull = maxPull;
+    this.stats.guidanceStatus = 'BALLISTIC TRANSIT';
 
-    // RK4 Physics Step
+    // Physics Step
     this.probe.vel.add(Vector2.scale(acc, dt));
     this.probe.pos.add(Vector2.scale(this.probe.vel, dt));
     this.probe.heading = this.probe.vel.angle();
 
     this.recordTrail();
 
-    // Distance to Sol Prime
-    const dTarget = this.probe.pos.dist(scene.targetStar.position);
+    // Check Distance to Target Star Sol Prime
+    const dTarget = this.probe.pos.dist(targetStar.position);
     this.stats.targetDist = dTarget;
 
-    // Check SOI breach into Sol Prime -> Trigger Transition 1!
-    if (dTarget <= scene.targetStar.soiRadius) {
+    // Trigger Transition 1 when entering Sol Prime's SOI
+    if (dTarget <= targetStar.soiRadius) {
       this.stats.transitTimes.t1 = this.stageTime;
-      this.stats.assistsTriggered++;
       this.triggerTransitionToSolar();
     }
   }
@@ -212,18 +225,24 @@ export class ContinuumDirector {
     this.stageTime = 0;
     this.transitionProgress = 0;
 
-    // Calculate arrival entry angle relative to target star
-    const relX = this.probe.pos.x - this.galacticScene.targetStar.position.x;
-    const relY = this.probe.pos.y - this.galacticScene.targetStar.position.y;
+    const targetStar = this.galacticScene.targetStar;
+
+    // 1. Compute exact relative position and entry angle
+    const relX = this.probe.pos.x - targetStar.position.x;
+    const relY = this.probe.pos.y - targetStar.position.y;
     const incomingAngle = Math.atan2(relY, relX);
 
-    // Build the Solar Scene
-    this.solarScene = buildSolarScene(incomingAngle, 26.0);
+    // 2. Compute exact velocity heading angle and incoming speed
+    const headingAngle = Math.atan2(this.probe.vel.y, this.probe.vel.x);
+    const incomingSpeed = this.probe.vel.mag();
 
-    // Target Camera zooms in on Sol Prime
-    this.camera.targetX = this.galacticScene.targetStar.position.x;
-    this.camera.targetY = this.galacticScene.targetStar.position.y;
-    this.camera.targetZoom = 0.95;
+    // 3. Build Solar Scene with angle and heading preservation
+    this.solarScene = buildSolarScene(incomingAngle, headingAngle, incomingSpeed);
+
+    // Camera zooms into Sol Prime
+    this.camera.targetX = targetStar.position.x;
+    this.camera.targetY = targetStar.position.y;
+    this.camera.targetZoom = 0.90;
 
     if (this.onStageChanged) {
       this.onStageChanged(this.stage, this.solarScene);
@@ -234,17 +253,16 @@ export class ContinuumDirector {
     this.transitionProgress += dt / this.transitionDuration;
 
     if (this.transitionProgress >= 1.0) {
-      // Transition complete! Enter Solar System Stage
       this.stage = STAGES.STAGE_2_SOLAR;
       this.stageTime = 0;
       this.trail = [];
 
-      // Spawn probe in Solar coordinate system
+      // Spawn probe in Solar frame with exact preserved entry angle and heading!
       this.probe.pos.copy(this.solarScene.probeStartPos);
       this.probe.vel.copy(this.solarScene.probeStartVel);
       this.probe.heading = this.probe.vel.angle();
 
-      // Recenter camera on solar center
+      // Recenter camera on Sol
       this.camera.x = 0;
       this.camera.y = 0;
       this.camera.zoom = this.solarScene.defaultZoom;
@@ -259,7 +277,7 @@ export class ContinuumDirector {
   }
 
   // -------------------------------------------------------------
-  // STAGE 2: SOLAR SYSTEM
+  // STAGE 2: SOLAR SYSTEM WITH AUTONOMOUS MID-COURSE GUIDANCE (MCC)
   // -------------------------------------------------------------
   updateSolarStage(dt) {
     const scene = this.solarScene;
@@ -267,18 +285,19 @@ export class ContinuumDirector {
     const G = 1.0;
     const eps = 4.0;
 
-    // Evaluate moving planetary positions
+    // Evaluate moving planetary orbits
     for (const body of scene.bodies) {
       body.evaluateAtTime(t);
     }
 
-    // Camera tracks mid-point between probe and target planet Terra
     const terraPos = scene.targetPlanet.getPositionAtTime(t);
-    this.camera.targetX = this.probe.pos.x * 0.4 + terraPos.x * 0.6;
-    this.camera.targetY = this.probe.pos.y * 0.4 + terraPos.y * 0.6;
+
+    // Camera tracks mid-point between probe and target planet Terra
+    this.camera.targetX = this.probe.pos.x * 0.45 + terraPos.x * 0.55;
+    this.camera.targetY = this.probe.pos.y * 0.45 + terraPos.y * 0.55;
     this.camera.targetZoom = scene.defaultZoom;
 
-    // Compute gravity from Sol and all planets
+    // 1. Natural Gravity from Sol and all planets
     const acc = new Vector2(0, 0);
     let maxPull = 0;
     let dominantName = 'Sun (Sol)';
@@ -304,21 +323,67 @@ export class ContinuumDirector {
     this.stats.activeGravityWell = dominantName;
     this.stats.gravityPull = maxPull;
 
-    // Physics step
+    // Distance to Terra
+    const dTerra = this.probe.pos.dist(terraPos);
+    this.stats.targetDist = dTerra;
+
+    // 2. AUTONOMOUS MID-COURSE CORRECTION (MCC) GUIDANCE CONTROLLER
+    // Computes heading deflection to guarantee an authentic intercept of Terra!
+    const distToSun = this.probe.pos.mag();
+    let isBurningMCC = false;
+
+    if (distToSun >= 150.0 && distToSun <= 440.0 && dTerra > scene.targetPlanet.soiRadius) {
+      // Calculate desired rendezvous heading toward Terra
+      const dx = terraPos.x - this.probe.pos.x;
+      const dy = terraPos.y - this.probe.pos.y;
+      const desiredHeading = Math.atan2(dy, dx);
+      const currentHeading = Math.atan2(this.probe.vel.y, this.probe.vel.x);
+      let angleDiff = (desiredHeading - currentHeading + Math.PI) % (Math.PI * 2) - Math.PI;
+
+      if (Math.abs(angleDiff) > 0.04) {
+        isBurningMCC = true;
+        this.probe.activeTrim = 'MCC';
+        this.stats.guidanceStatus = 'MCC-1: SHAPING TERRA INTERCEPT';
+
+        // Apply corrective acceleration perpendicular to current velocity
+        const burnAcc = Math.max(-14.0, Math.min(14.0, angleDiff * 24.0));
+        const curSpeed = this.probe.vel.mag();
+        if (curSpeed > 0.1) {
+          const perpX = -this.probe.vel.y / curSpeed;
+          const perpY = this.probe.vel.x / curSpeed;
+          acc.x += perpX * burnAcc;
+          acc.y += perpY * burnAcc;
+
+          // Spawn visible thruster particles streaming opposite burn direction
+          const particleAngle = Math.atan2(perpY * burnAcc, perpX * burnAcc) + Math.PI;
+          for (let i = 0; i < 3; i++) {
+            this.particles.push({
+              pos: this.probe.pos.clone(),
+              vel: Vector2.fromAngle(particleAngle + (Math.random() - 0.5) * 0.5, Math.random() * 35 + 15),
+              life: 0.8,
+              color: '#38bdf8', // Cyan ion thruster plume
+              size: Math.random() * 3 + 2
+            });
+          }
+        }
+      }
+    }
+
+    if (!isBurningMCC) {
+      this.probe.activeTrim = null;
+      this.stats.guidanceStatus = 'COASTING ON INTERCEPT CORRIDOR';
+    }
+
+    // Physics Step
     this.probe.vel.add(Vector2.scale(acc, dt));
     this.probe.pos.add(Vector2.scale(this.probe.vel, dt));
     this.probe.heading = this.probe.vel.angle();
 
     this.recordTrail();
 
-    // Distance to Terra
-    const dTerra = this.probe.pos.dist(terraPos);
-    this.stats.targetDist = dTerra;
-
     // Check SOI breach into Terra -> Trigger Transition 2!
     if (dTerra <= scene.targetPlanet.soiRadius) {
       this.stats.transitTimes.t2 = this.stageTime;
-      this.stats.assistsTriggered++;
       this.triggerTransitionToPlanetary();
     }
   }
@@ -328,13 +393,23 @@ export class ContinuumDirector {
     this.stageTime = 0;
     this.transitionProgress = 0;
 
-    const terraPos = this.solarScene.targetPlanet.getPositionAtTime(this.solarScene.targetPlanet.orbitAngle);
+    const terra = this.solarScene.targetPlanet;
+    const terraPos = terra.getPositionAtTime(this.stageTime);
+
+    // Compute exact arrival angle and velocity heading relative to Terra
     const relX = this.probe.pos.x - terraPos.x;
     const relY = this.probe.pos.y - terraPos.y;
     const incomingAngle = Math.atan2(relY, relX);
 
+    // Velocity relative to Terra's orbital motion
+    const terraVel = terra.getVelocityAtTime(this.stageTime);
+    const relVelX = this.probe.vel.x - terraVel.x;
+    const relVelY = this.probe.vel.y - terraVel.y;
+    const headingAngle = Math.atan2(relVelY, relVelX);
+    const incomingSpeed = Math.sqrt(relVelX * relVelX + relVelY * relVelY);
+
     // Build Planetary Scene
-    this.planetaryScene = buildPlanetaryScene(incomingAngle, 21.0);
+    this.planetaryScene = buildPlanetaryScene(incomingAngle, headingAngle, incomingSpeed);
 
     // Camera zooms into Terra
     this.camera.targetX = terraPos.x;
@@ -350,12 +425,11 @@ export class ContinuumDirector {
     this.transitionProgress += dt / this.transitionDuration;
 
     if (this.transitionProgress >= 1.0) {
-      // Transition complete! Enter Planetary Subsystem Stage
       this.stage = STAGES.STAGE_3_PLANETARY;
       this.stageTime = 0;
       this.trail = [];
 
-      // Spawn probe in Terra coordinate system
+      // Spawn probe in Terra coordinate system with exact relative angles
       this.probe.pos.copy(this.planetaryScene.probeStartPos);
       this.probe.vel.copy(this.planetaryScene.probeStartVel);
       this.probe.heading = this.probe.vel.angle();
@@ -375,7 +449,7 @@ export class ContinuumDirector {
   }
 
   // -------------------------------------------------------------
-  // STAGE 3: PLANETARY & MOON SUBSYSTEM
+  // STAGE 3: PLANETARY & MOON SUBSYSTEM (TERMINAL DOCKING)
   // -------------------------------------------------------------
   updatePlanetaryStage(dt) {
     const scene = this.planetaryScene;
@@ -389,10 +463,11 @@ export class ContinuumDirector {
     }
     scene.targetWaypoint.evaluateAtTime(t);
 
-    // Camera tracks mid-point between probe and Station Alpha
     const wpPos = scene.targetWaypoint.getPositionAtTime(t);
-    this.camera.targetX = this.probe.pos.x * 0.4 + wpPos.x * 0.6;
-    this.camera.targetY = this.probe.pos.y * 0.4 + wpPos.y * 0.6;
+
+    // Camera tracks mid-point between probe and Station Alpha
+    this.camera.targetX = this.probe.pos.x * 0.45 + wpPos.x * 0.55;
+    this.camera.targetY = this.probe.pos.y * 0.45 + wpPos.y * 0.55;
     this.camera.targetZoom = scene.defaultZoom;
 
     // Gravity from Terra and Luna
@@ -425,14 +500,15 @@ export class ContinuumDirector {
     const dWaypoint = this.probe.pos.dist(wpPos);
     this.stats.targetDist = dWaypoint;
 
-    // AUTOMATED TARGET-RELATIVE RCS BRAKING inside Station Alpha SOI!
-    if (dWaypoint <= scene.targetWaypoint.captureRadius * 1.5) {
+    // AUTOMATED TARGET-RELATIVE RCS BRAKING
+    if (dWaypoint <= scene.targetWaypoint.captureRadius * 1.8) {
       const relVel = scene.targetWaypoint.getRelativeVelocity(this.probe.vel, t);
       const relSpeed = relVel.mag();
 
-      if (relSpeed > (scene.targetWaypoint.maxCaptureSpeed - 2.0)) {
+      if (relSpeed > (scene.targetWaypoint.maxCaptureSpeed - 2.5)) {
         this.probe.activeTrim = 'BRAKE';
-        const brakeAcc = 18.0; // m/s^2 continuous RCS burn
+        this.stats.guidanceStatus = 'TERMINAL BRAKING: MATCHING STATION VELOCITY';
+        const brakeAcc = 19.5; // m/s^2 continuous RCS burn
         const relUnit = relVel.clone().normalize();
         this.probe.vel.sub(Vector2.scale(relUnit, brakeAcc * dt));
 
@@ -443,20 +519,22 @@ export class ContinuumDirector {
             pos: this.probe.pos.clone(),
             vel: Vector2.fromAngle(particleAngle + (Math.random() - 0.5) * 0.6, Math.random() * 35 + 15),
             life: 0.8,
-            color: '#f59e0b',
+            color: '#f59e0b', // Amber braking thrusters
             size: Math.random() * 3 + 2
           });
         }
       } else {
         this.probe.activeTrim = null;
+        this.stats.guidanceStatus = 'CAPTURE WINDOW ATTAINED';
       }
 
-      // Check Docking / Capture Lock
+      // Check Docking / Clamp Lock
       if (dWaypoint <= scene.targetWaypoint.captureRadius && relSpeed <= scene.targetWaypoint.maxCaptureSpeed) {
         this.probe.isDocked = true;
         this.probe.activeTrim = null;
         scene.targetWaypoint.isCaptured = true;
         this.stage = STAGES.STAGE_4_COMPLETE;
+        this.stats.guidanceStatus = '★ DOCKED TO STATION ALPHA';
         this.stats.transitTimes.t3 = this.stageTime;
         this.isPaused = true;
 
@@ -467,9 +545,10 @@ export class ContinuumDirector {
       }
     } else {
       this.probe.activeTrim = null;
+      this.stats.guidanceStatus = 'ORBITAL DESCENT TO STATION ALPHA';
     }
 
-    // Physics step
+    // Physics Step
     this.probe.vel.add(Vector2.scale(acc, dt));
     this.probe.pos.add(Vector2.scale(this.probe.vel, dt));
     this.probe.heading = this.probe.vel.angle();
@@ -480,7 +559,7 @@ export class ContinuumDirector {
   recordTrail() {
     if (this.trail.length === 0 || this.probe.pos.distSq(this.trail[this.trail.length - 1]) > 9) {
       this.trail.push(this.probe.pos.clone());
-      if (this.trail.length > 280) this.trail.shift();
+      if (this.trail.length > 320) this.trail.shift();
     }
   }
 }

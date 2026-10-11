@@ -129,7 +129,7 @@ export function buildSolarScene(incomingAngle = 2.6, headingAngle = -0.5, incomi
   );
 
   // Exact entry velocity vector pointing in direction of headingAngle
-  const speed = Math.max(22.0, Math.min(30.0, incomingSpeed));
+  const speed = Math.max(18.0, Math.min(24.0, incomingSpeed));
   const probeStartVel = new Vector2(
     Math.cos(headingAngle) * speed,
     Math.sin(headingAngle) * speed
@@ -154,7 +154,7 @@ export function buildSolarScene(incomingAngle = 2.6, headingAngle = -0.5, incomi
  * Builds Tier 3: Planetary & Moon Subsystem Scale
  * Accurately initialized from Solar entry angle and heading
  */
-export function buildPlanetaryScene(incomingAngle = -1.9, headingAngle = 1.2, incomingSpeed = 22.0) {
+export function buildPlanetaryScene(incomingAngle = -1.9, headingAngle = 1.2, incomingSpeed = 18.0) {
   const terra = new CelestialBody({
     id: 'terra-t3',
     name: 'Terra',
@@ -200,7 +200,7 @@ export function buildPlanetaryScene(incomingAngle = -1.9, headingAngle = 1.2, in
   );
 
   // Entry velocity matching headingAngle
-  const speed = Math.max(18.0, Math.min(24.0, incomingSpeed));
+  const speed = Math.max(16.0, Math.min(22.0, incomingSpeed));
   const probeStartVel = new Vector2(
     Math.cos(headingAngle) * speed,
     Math.sin(headingAngle) * speed

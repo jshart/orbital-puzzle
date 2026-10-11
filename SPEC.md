@@ -134,4 +134,16 @@ Orbital Puzzle/
 
 ## 6. Development & Autonomous Execution Protocol
 * **Autonomous Server Launching:** Whenever writing, testing, or demonstrating code, prototypes, or side demos, the AI pair programmer **MUST always automatically launch the local development server** (`python serve.py [target]`) in the background. The user should never have to manually run terminal commands to start web servers.
-* **Direct Clickable URLs:** Responses must always provide direct, clickable markdown links (e.g. `http://localhost:8000/galactic_demo.html` or `http://localhost:8000/`) so the user can immediately jump into the live application with one click.
+* **Direct Clickable URLs:** Responses must always provide direct, clickable markdown links (e.g. `http://localhost:8000/continuum_demo.html`, `http://localhost:8000/galactic_demo.html`, or `http://localhost:8000/`) so the user can immediately jump into the live application with one click.
+
+---
+
+## 7. Cosmic Continuum Multi-Scale Architecture (Demo Mode)
+* **Deterministic Sector & Orbits:** 65-star sector generated using Mulberry32 PRNG (seed `1042`) with analytical Keplerian orbits ($\theta(t) = \theta_0 + \omega t$).
+* **Closed-Loop Proportional Navigation Guidance:**
+  - **Stage 1 (Galactic):** Interstellar Guidance Controller (IGC) steers probe with lateral acceleration against Sagittarius Prime (SMBH mass 220,000) to reliably enter Sol Prime's SOI boundary ($R \le 135\text{ AU}$).
+  - **Stage 2 (Solar):** Predictive Lead-Pursuit Mid-Course Correction (MCC) guides probe to Terra's future orbital position ($t_{\text{go}} = d_{\text{terra}} / v_{\text{probe}}$) with periapsis speed regulation ($v \le 24\text{ m/s}$) to guarantee Terra SOI entry ($R \le 65\text{ AU}$).
+  - **Stage 3 (Planetary):** Terminal approach steering towards Station Alpha + target-relative RCS braking inside capture radius to achieve clamp docking lock ($v_{\text{rel}} \le 18\text{ m/s}$).
+* **Seamless Patched Conics Hand-Offs:**
+  - Preserves exact relative entry angle $\theta_{\text{entry}} = \text{atan2}(y_{\text{probe}} - y_{\text{body}}, x_{\text{probe}} - x_{\text{body}})$ and velocity heading $\theta_{\text{vel}} = \text{atan2}(v_y, v_x)$ across scale transitions.
+  - Translates visual coordinate origins during cross-fades so destination celestial bodies remain anchored at the screen center without camera jump or angle discontinuity.

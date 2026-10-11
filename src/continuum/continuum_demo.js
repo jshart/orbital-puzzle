@@ -4,6 +4,7 @@
  * planetary orbits, cross-fades, guidance status HUD, and audio chimes.
  */
 
+import { Vector2 } from '../vector.js';
 import { ContinuumDirector, STAGES } from './continuum_director.js';
 import { StellarRenderer } from '../galactic/stellar_renderer.js';
 import { SoundFX } from '../sound.js';
@@ -86,8 +87,13 @@ export class ContinuumDemoApp {
       this.renderGalacticScene(ctx, cam.zoom, 1.0);
     } else if (stage === STAGES.TRANSITION_1_TO_SOLAR) {
       const p = this.director.transitionProgress;
-      // Cross-fade: Galactic fades out, Solar fades in
+      const tStar = this.director.galacticScene.targetStar;
+      // Shift Galactic scene so Sol Prime translates to (0, 0), perfectly aligning with Sol!
+      ctx.save();
+      ctx.translate(-tStar.position.x, -tStar.position.y);
       this.renderGalacticScene(ctx, cam.zoom, 1.0 - p);
+      ctx.restore();
+
       if (this.director.solarScene) {
         this.renderSolarScene(ctx, cam.zoom, p);
       }
@@ -95,8 +101,13 @@ export class ContinuumDemoApp {
       this.renderSolarScene(ctx, cam.zoom, 1.0);
     } else if (stage === STAGES.TRANSITION_2_TO_PLANETARY) {
       const p = this.director.transitionProgress;
-      // Cross-fade: Solar fades out, Planetary fades in
+      const terraPos = this.director.solarScene.targetPlanet.getPositionAtTime(this.director.stageTime);
+      // Shift Solar scene so Terra translates to (0, 0), perfectly aligning with Terra in Planetary scene!
+      ctx.save();
+      ctx.translate(-terraPos.x, -terraPos.y);
       this.renderSolarScene(ctx, cam.zoom, 1.0 - p);
+      ctx.restore();
+
       if (this.director.planetaryScene) {
         this.renderPlanetaryScene(ctx, cam.zoom, p);
       }
@@ -202,9 +213,24 @@ export class ContinuumDemoApp {
   renderProbe(ctx, zoom) {
     const invZoom = 1 / Math.max(0.01, zoom);
     const probe = this.director.probe;
+    const stage = this.director.stage;
+
+    // Determine continuous probe position across coordinate transitions
+    let drawPos = probe.pos;
+    if (stage === STAGES.TRANSITION_1_TO_SOLAR && this.director.solarScene) {
+      const tStar = this.director.galacticScene.targetStar;
+      const relGalactic = Vector2.sub(probe.pos, tStar.position);
+      const p = this.director.transitionProgress;
+      drawPos = Vector2.lerp(relGalactic, this.director.solarScene.probeStartPos, p);
+    } else if (stage === STAGES.TRANSITION_2_TO_PLANETARY && this.director.planetaryScene) {
+      const terraPos = this.director.solarScene.targetPlanet.getPositionAtTime(this.director.stageTime);
+      const relSolar = Vector2.sub(probe.pos, terraPos);
+      const p = this.director.transitionProgress;
+      drawPos = Vector2.lerp(relSolar, this.director.planetaryScene.probeStartPos, p);
+    }
 
     // Trail
-    if (this.director.trail.length > 1) {
+    if (this.director.trail.length > 1 && stage !== STAGES.TRANSITION_1_TO_SOLAR && stage !== STAGES.TRANSITION_2_TO_PLANETARY) {
       ctx.save();
       ctx.beginPath();
       ctx.moveTo(this.director.trail[0].x, this.director.trail[0].y);
@@ -230,7 +256,7 @@ export class ContinuumDemoApp {
 
     // Probe Fuselage
     ctx.save();
-    ctx.translate(probe.pos.x, probe.pos.y);
+    ctx.translate(drawPos.x, drawPos.y);
     ctx.rotate(probe.heading);
 
     // Active Thruster Jet Plume if Burning

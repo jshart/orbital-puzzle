@@ -165,16 +165,23 @@ export class ContinuumDirector {
     sector.evaluateAtTime(this.totalTime);
 
     // Dynamic Camera Tracking:
-    // Starts centered at the core SMBH (0, 0), and progressively shifts to framing
-    // between probe and Sol Prime as probe approaches target
+    // Stays centered on the majestic central Supermassive Black Hole (Sagittarius Prime) at (0, 0)
+    // with wide field-of-view displaying all 65 systems.
+    // As probe approaches Sol Prime (dTarget < 340 AU), smoothly pan and zoom into target system.
     const targetStar = scene.targetStar;
-    const probeProgress = Math.min(1.0, this.stageTime / 18.0);
-    const focusX = 0 * (1 - probeProgress) + (this.probe.pos.x * 0.4 + targetStar.position.x * 0.6) * probeProgress;
-    const focusY = 0 * (1 - probeProgress) + (this.probe.pos.y * 0.4 + targetStar.position.y * 0.6) * probeProgress;
-    
-    this.camera.targetX = focusX;
-    this.camera.targetY = focusY;
-    this.camera.targetZoom = 0.24 + probeProgress * 0.18; // Gently zooms in from 0.24x to 0.42x
+    const dTarget = this.probe.pos.dist(targetStar.position);
+    this.stats.targetDist = dTarget;
+
+    if (dTarget > 340) {
+      this.camera.targetX = 0;
+      this.camera.targetY = 0;
+      this.camera.targetZoom = 0.22;
+    } else {
+      const approachFrac = Math.max(0, Math.min(1.0, (340 - dTarget) / (340 - targetStar.soiRadius)));
+      this.camera.targetX = targetStar.position.x * approachFrac;
+      this.camera.targetY = targetStar.position.y * approachFrac;
+      this.camera.targetZoom = 0.22 + approachFrac * 0.42;
+    }
 
     // Compute net gravity from all 65 stars + Central Supermassive Black Hole
     const acc = new Vector2(0, 0);
@@ -200,7 +207,48 @@ export class ContinuumDirector {
 
     this.stats.activeGravityWell = dominantName;
     this.stats.gravityPull = maxPull;
-    this.stats.guidanceStatus = 'BALLISTIC TRANSIT';
+
+    // INTERSTELLAR GUIDANCE CONTROLLER (IGC)
+    // Continuous proportional navigation steering toward Sol Prime against SMBH gravity
+    const sdx = targetStar.position.x - this.probe.pos.x;
+    const sdy = targetStar.position.y - this.probe.pos.y;
+    const desiredHeading = Math.atan2(sdy, sdx);
+    const curHeading = Math.atan2(this.probe.vel.y, this.probe.vel.x);
+    let angleDiff = (desiredHeading - curHeading + Math.PI) % (Math.PI * 2) - Math.PI;
+
+    const curSpeed = this.probe.vel.mag();
+    let isBurningIGC = false;
+
+    if (curSpeed > 0.1 && dTarget > targetStar.soiRadius) {
+      if (Math.abs(angleDiff) > 0.02) {
+        isBurningIGC = true;
+        this.probe.activeTrim = 'MCC';
+        this.stats.guidanceStatus = 'IGC-1: STEERING TO SOL PRIME';
+
+        const burnAcc = Math.max(-22.0, Math.min(22.0, angleDiff * 32.0));
+        const perpX = -this.probe.vel.y / curSpeed;
+        const perpY = this.probe.vel.x / curSpeed;
+        acc.x += perpX * burnAcc;
+        acc.y += perpY * burnAcc;
+
+        // Spawn visible cyan ion thruster particles streaming opposite burn direction
+        const particleAngle = Math.atan2(perpY * burnAcc, perpX * burnAcc) + Math.PI;
+        for (let i = 0; i < 3; i++) {
+          this.particles.push({
+            pos: this.probe.pos.clone(),
+            vel: Vector2.fromAngle(particleAngle + (Math.random() - 0.5) * 0.5, Math.random() * 35 + 15),
+            life: 0.8,
+            color: '#38bdf8',
+            size: Math.random() * 3 + 2
+          });
+        }
+      }
+    }
+
+    if (!isBurningIGC) {
+      this.probe.activeTrim = null;
+      this.stats.guidanceStatus = 'COASTING ON INTERCEPT VECTOR';
+    }
 
     // Physics Step
     this.probe.vel.add(Vector2.scale(acc, dt));
@@ -208,10 +256,6 @@ export class ContinuumDirector {
     this.probe.heading = this.probe.vel.angle();
 
     this.recordTrail();
-
-    // Check Distance to Target Star Sol Prime
-    const dTarget = this.probe.pos.dist(targetStar.position);
-    this.stats.targetDist = dTarget;
 
     // Trigger Transition 1 when entering Sol Prime's SOI
     if (dTarget <= targetStar.soiRadius) {
@@ -232,17 +276,16 @@ export class ContinuumDirector {
     const relY = this.probe.pos.y - targetStar.position.y;
     const incomingAngle = Math.atan2(relY, relX);
 
-    // 2. Compute exact velocity heading angle and incoming speed
+    // 2. Compute exact velocity heading angle
     const headingAngle = Math.atan2(this.probe.vel.y, this.probe.vel.x);
-    const incomingSpeed = this.probe.vel.mag();
 
-    // 3. Build Solar Scene with angle and heading preservation
-    this.solarScene = buildSolarScene(incomingAngle, headingAngle, incomingSpeed);
+    // 3. Build Solar Scene with angle and heading preservation (scaled to 20 m/s transfer speed)
+    this.solarScene = buildSolarScene(incomingAngle, headingAngle, 20.0);
 
-    // Camera zooms into Sol Prime
-    this.camera.targetX = targetStar.position.x;
-    this.camera.targetY = targetStar.position.y;
-    this.camera.targetZoom = 0.90;
+    // Center camera on Sol in Solar frame
+    this.camera.targetX = 0;
+    this.camera.targetY = 0;
+    this.camera.targetZoom = this.solarScene.defaultZoom;
 
     if (this.onStageChanged) {
       this.onStageChanged(this.stage, this.solarScene);
@@ -328,43 +371,52 @@ export class ContinuumDirector {
     this.stats.targetDist = dTerra;
 
     // 2. AUTONOMOUS MID-COURSE CORRECTION (MCC) GUIDANCE CONTROLLER
-    // Computes heading deflection to guarantee an authentic intercept of Terra!
-    const distToSun = this.probe.pos.mag();
+    // Predictive Lead-Pursuit Intercept + Speed Management
     let isBurningMCC = false;
 
-    if (distToSun >= 150.0 && distToSun <= 440.0 && dTerra > scene.targetPlanet.soiRadius) {
-      // Calculate desired rendezvous heading toward Terra
-      const dx = terraPos.x - this.probe.pos.x;
-      const dy = terraPos.y - this.probe.pos.y;
-      const desiredHeading = Math.atan2(dy, dx);
-      const currentHeading = Math.atan2(this.probe.vel.y, this.probe.vel.x);
-      let angleDiff = (desiredHeading - currentHeading + Math.PI) % (Math.PI * 2) - Math.PI;
+    if (dTerra > scene.targetPlanet.soiRadius) {
+      const curSpeed = this.probe.vel.mag();
+      if (curSpeed > 0.1) {
+        // 1. Calculate time-to-go and predict Terra's future orbital position
+        const tGo = Math.min(15.0, dTerra / Math.max(14.0, curSpeed));
+        const predTerraPos = scene.targetPlanet.getPositionAtTime(t + tGo);
 
-      if (Math.abs(angleDiff) > 0.04) {
-        isBurningMCC = true;
-        this.probe.activeTrim = 'MCC';
-        this.stats.guidanceStatus = 'MCC-1: SHAPING TERRA INTERCEPT';
+        const dx = predTerraPos.x - this.probe.pos.x;
+        const dy = predTerraPos.y - this.probe.pos.y;
+        const desiredHeading = Math.atan2(dy, dx);
+        const currentHeading = Math.atan2(this.probe.vel.y, this.probe.vel.x);
+        let angleDiff = (desiredHeading - currentHeading + Math.PI) % (Math.PI * 2) - Math.PI;
 
-        // Apply corrective acceleration perpendicular to current velocity
-        const burnAcc = Math.max(-14.0, Math.min(14.0, angleDiff * 24.0));
-        const curSpeed = this.probe.vel.mag();
-        if (curSpeed > 0.1) {
+        if (Math.abs(angleDiff) > 0.02) {
+          isBurningMCC = true;
+          this.probe.activeTrim = 'MCC';
+          this.stats.guidanceStatus = 'MCC-1: SHAPING TERRA INTERCEPT';
+
+          // Corrective lateral burn perpendicular to current velocity
+          const burnAcc = Math.max(-20.0, Math.min(20.0, angleDiff * 30.0));
           const perpX = -this.probe.vel.y / curSpeed;
           const perpY = this.probe.vel.x / curSpeed;
           acc.x += perpX * burnAcc;
           acc.y += perpY * burnAcc;
 
-          // Spawn visible thruster particles streaming opposite burn direction
+          // Spawn visible cyan ion thruster particles
           const particleAngle = Math.atan2(perpY * burnAcc, perpX * burnAcc) + Math.PI;
           for (let i = 0; i < 3; i++) {
             this.particles.push({
               pos: this.probe.pos.clone(),
               vel: Vector2.fromAngle(particleAngle + (Math.random() - 0.5) * 0.5, Math.random() * 35 + 15),
               life: 0.8,
-              color: '#38bdf8', // Cyan ion thruster plume
+              color: '#38bdf8',
               size: Math.random() * 3 + 2
             });
           }
+        }
+
+        // 2. Speed Management: Brake if falling too fast towards periapsis to keep turn radius tight
+        if (curSpeed > 24.0) {
+          const brake = Math.min(16.0, (curSpeed - 22.0) * 4.0);
+          acc.x -= (this.probe.vel.x / curSpeed) * brake;
+          acc.y -= (this.probe.vel.y / curSpeed) * brake;
         }
       }
     }
@@ -406,15 +458,14 @@ export class ContinuumDirector {
     const relVelX = this.probe.vel.x - terraVel.x;
     const relVelY = this.probe.vel.y - terraVel.y;
     const headingAngle = Math.atan2(relVelY, relVelX);
-    const incomingSpeed = Math.sqrt(relVelX * relVelX + relVelY * relVelY);
 
-    // Build Planetary Scene
-    this.planetaryScene = buildPlanetaryScene(incomingAngle, headingAngle, incomingSpeed);
+    // Build Planetary Scene (normalized to 18.0 m/s planetary capture entry speed)
+    this.planetaryScene = buildPlanetaryScene(incomingAngle, headingAngle, 18.0);
 
-    // Camera zooms into Terra
-    this.camera.targetX = terraPos.x;
-    this.camera.targetY = terraPos.y;
-    this.camera.targetZoom = 1.35;
+    // Camera targets Terra at origin in Planetary frame
+    this.camera.targetX = 0;
+    this.camera.targetY = 0;
+    this.camera.targetZoom = this.planetaryScene.defaultZoom;
 
     if (this.onStageChanged) {
       this.onStageChanged(this.stage, this.planetaryScene);
@@ -500,15 +551,47 @@ export class ContinuumDirector {
     const dWaypoint = this.probe.pos.dist(wpPos);
     this.stats.targetDist = dWaypoint;
 
-    // AUTOMATED TARGET-RELATIVE RCS BRAKING
-    if (dWaypoint <= scene.targetWaypoint.captureRadius * 1.8) {
+    // STAGE 3 GUIDANCE: APPROACH GUIDANCE + TERMINAL RCS BRAKING
+    if (dWaypoint > scene.targetWaypoint.captureRadius * 1.35) {
+      // Approach Guidance: steer toward Station Alpha
+      const dx = wpPos.x - this.probe.pos.x;
+      const dy = wpPos.y - this.probe.pos.y;
+      const desiredHeading = Math.atan2(dy, dx);
+      const currentHeading = Math.atan2(this.probe.vel.y, this.probe.vel.x);
+      let angleDiff = (desiredHeading - currentHeading + Math.PI) % (Math.PI * 2) - Math.PI;
+      const curSpeed = this.probe.vel.mag();
+
+      if (curSpeed > 0.1 && Math.abs(angleDiff) > 0.02) {
+        this.probe.activeTrim = 'MCC';
+        this.stats.guidanceStatus = 'APPROACH GUIDANCE: INTERCEPTING STATION ALPHA';
+        const burnAcc = Math.max(-16.0, Math.min(16.0, angleDiff * 24.0));
+        const perpX = -this.probe.vel.y / curSpeed;
+        const perpY = this.probe.vel.x / curSpeed;
+        acc.x += perpX * burnAcc;
+        acc.y += perpY * burnAcc;
+
+        for (let i = 0; i < 2; i++) {
+          this.particles.push({
+            pos: this.probe.pos.clone(),
+            vel: Vector2.fromAngle(this.probe.heading + Math.PI + (Math.random() - 0.5) * 0.5, Math.random() * 25 + 10),
+            life: 0.6,
+            color: '#38bdf8',
+            size: Math.random() * 2.5 + 1.5
+          });
+        }
+      } else {
+        this.probe.activeTrim = null;
+        this.stats.guidanceStatus = 'ORBITAL DESCENT TO STATION ALPHA';
+      }
+    } else {
+      // Terminal RCS Velocity Matching Braking inside capture corridor
       const relVel = scene.targetWaypoint.getRelativeVelocity(this.probe.vel, t);
       const relSpeed = relVel.mag();
 
-      if (relSpeed > (scene.targetWaypoint.maxCaptureSpeed - 2.5)) {
+      if (relSpeed > (scene.targetWaypoint.maxCaptureSpeed - 3.0)) {
         this.probe.activeTrim = 'BRAKE';
         this.stats.guidanceStatus = 'TERMINAL BRAKING: MATCHING STATION VELOCITY';
-        const brakeAcc = 19.5; // m/s^2 continuous RCS burn
+        const brakeAcc = 22.0; // m/s^2 continuous RCS burn
         const relUnit = relVel.clone().normalize();
         this.probe.vel.sub(Vector2.scale(relUnit, brakeAcc * dt));
 
@@ -543,9 +626,6 @@ export class ContinuumDirector {
         }
         return;
       }
-    } else {
-      this.probe.activeTrim = null;
-      this.stats.guidanceStatus = 'ORBITAL DESCENT TO STATION ALPHA';
     }
 
     // Physics Step

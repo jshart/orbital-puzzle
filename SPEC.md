@@ -162,3 +162,33 @@ Orbital Puzzle/
   5. `tests/test_continuum_e2e_cdp.py`: Headless Chrome DevTools Protocol (CDP) live end-to-end browser test verifying zero console exceptions, 3-tier traversal, and docking completion.
 * **Execution:** `python -m pytest` executes all 14 tests in $\approx 17\text{s}$ with 100% pass rate.
 
+---
+
+## 9. Architectural Generalization Specification (Generic Engine vs Demo Configuration)
+
+### 9.1 Architectural Assessment
+The multi-scale architecture consists of a **mathematically generic engine core** driven by a **curated demo configuration**:
+
+| Component | Architecture Status | Technical Details |
+| :--- | :--- | :--- |
+| **Coordinate Transformation** | **100% Generic Engine** | Patched-conics boundary calculation converts arbitrary 2D Cartesian positions and velocities into relative polar entry angles $\theta = \text{atan2}(\Delta y, \Delta x)$ and heading $\phi = \text{atan2}(v_y, v_x)$ for any target celestial body. |
+| **Focal-Centered Viewport Cross-Fade** | **100% Generic Engine** | Anchoring $(w/2, h/2)$ on $(-\vec{r}_{\text{target}})$ in outgoing scene and $(0, 0)$ in incoming scene guarantees artifact-free transitions between any pair of astronomical bodies with zero coordinate collisions. |
+| **Predictive Guidance (MCC)** | **100% Generic Engine** | Proportional lead-pursuit guidance dynamically predicts Keplerian orbital positions ($t + t_{\text{go}}$) on the fly. Verified across 16 arbitrary entry angles across $360^\circ$. |
+| **Subsystem Clocks** | **100% Generic Engine** | Analytical orbits ($\theta(t) = \theta_0 + \omega t$) run on continuous dedicated clocks, eliminating temporal and positional discontinuities. |
+| **Scene Graph Hierarchy** | *Demo Scaffolding* | Hardcoded to Sagittarius Prime ➔ Sol Prime ➔ Terra ➔ Station Alpha. Requires generalization to a dynamic tree structure. |
+| **State Machine Direction** | *Demo Scaffolding* | 1-way inward progression (`T1 ➔ Trans1 ➔ T2 ➔ Trans2 ➔ T3 ➔ Dock`). Requires bidirectional (inward/outward) traversal. |
+
+### 9.2 Production Generalization Blueprint (Hierarchical Scene Graph)
+To transition from the automated demo into full interactive gameplay across all 65 systems:
+1. **Hierarchical Tree Model:**
+   ```
+   Universe
+   └── Sector (Galactic Scale - 65 Stars)
+       └── Star System (Solar Scale - N Planets)
+           └── Planetary Subsystem (Moon/Station Scale - M Satellites)
+   ```
+2. **Bidirectional Transition Protocol:**
+   - **Inward Transition (SOI Capture):** When distance $d \le \text{body.soiRadius}$, capture relative state $(\theta_{\text{entry}}, \phi_{\text{vel}}, v_{\text{rel}})$, query body's child scene, and cross-fade downward one tier.
+   - **Outward Transition (Hyperbolic Escape):** When distance $r > \text{scene.outerBoundary}$ and velocity is hyperbolic ($E > 0$), calculate state relative to parent anchor, and cross-fade upward one tier.
+
+

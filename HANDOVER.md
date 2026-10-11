@@ -178,9 +178,20 @@ python -m pytest
 
 ## 7. Next Session Starting Point: Transitioning from Demo to Actual Gameplay
 
-In this session, we proved out the multi-scale continuum pipeline (Tier 1 Galaxy ➔ Tier 2 Solar ➔ Tier 3 Moon) with deterministic transitions and zero visual artifacts.
+In this session, we proved out the multi-scale continuum pipeline (Tier 1 Galaxy ➔ Tier 2 Solar ➔ Tier 3 Moon) with deterministic transitions, focal-centered camera cross-fades, and zero visual artifacts.
 
-### Key Focus Areas for Next Session:
+### 7.1 Architecture Assessment: Generic Engine vs. Demo Scaffolding
+- **Generic Engine Core (100% Reusable):**
+  - **Patched-Conics State Hand-off:** Arbitrary relative entry polar coordinates $(\theta_{\text{entry}}, \phi_{\text{heading}}, v_{\text{rel}})$ calculated dynamically for any target.
+  - **Focal-Centered Viewport Cross-Fade:** Both outgoing and incoming scenes center their respective focal body at $(w/2, h/2)$, guaranteeing zero visual jump or star/planet overlap regardless of coordinate magnitudes.
+  - **Predictive Lead-Pursuit Guidance (MCC):** Proved across 16 arbitrary entry angles across $360^\circ$ in the test suite; dynamically predicts Keplerian orbital positions on the fly.
+  - **Continuous Subsystem Clocks:** Dedicated clocks advance continuously, preventing temporal discontinuities.
+- **Demo Scaffolding (To Generalize in Next Session):**
+  - Replaces the hardcoded linear 1-way route (`Sagittarius Prime ➔ Sol Prime ➔ Terra ➔ Station Alpha`) with a dynamic **Hierarchical Scene Graph (Tree)**:
+    `Universe ➔ Sector (65 Stars) ➔ Star Systems (N Planets) ➔ Planetary Subsystems (M Satellites)`
+  - Replaces 1-way inward transitions with **Bidirectional Navigation**: inward SOI capture ($d \le R_{\text{soi}}$) and outward hyperbolic escape ($r > R_{\text{escape}}$).
+
+### 7.2 Key Focus Areas for Next Session:
 1. **Player Control & Interaction Across Scales:**
    - **Manual vs. Assisted Guidance:** Introduce player controls (flight vector adjustments, burn dials, ejection window selection) while retaining optional guidance assists (IGC / MCC flight directors).
    - **$\Delta v$ / Fuel Budgeting:** Add fuel consumption mechanics across tiers, challenging players to chain slingshots (e.g. Ares / Zeus assists) to conserve propellant for final orbital insertion.

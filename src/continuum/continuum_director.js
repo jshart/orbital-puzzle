@@ -60,6 +60,12 @@ export class ContinuumDirector {
       transitTimes: { t1: 0, t2: 0, t3: 0 }
     };
 
+    // Subsystem Clocks
+    this.solarTime = 0;
+    this.planetaryTime = 0;
+    this.completeTimer = 0;
+    this.victoryModalTriggered = false;
+
     // Active Scenes
     this.galacticScene = null;
     this.solarScene = null;
@@ -76,6 +82,10 @@ export class ContinuumDirector {
     this.stage = STAGES.STAGE_1_GALACTIC;
     this.stageTime = 0;
     this.totalTime = 0;
+    this.solarTime = 0;
+    this.planetaryTime = 0;
+    this.completeTimer = 0;
+    this.victoryModalTriggered = false;
     this.isPaused = false;
     this.transitionProgress = 0;
     this.trail = [];
@@ -146,6 +156,9 @@ export class ContinuumDirector {
         break;
       case STAGES.STAGE_3_PLANETARY:
         this.updatePlanetaryStage(scaledDt);
+        break;
+      case STAGES.STAGE_4_COMPLETE:
+        this.updateCompleteStage(scaledDt);
         break;
     }
 
@@ -267,7 +280,9 @@ export class ContinuumDirector {
   triggerTransitionToSolar() {
     this.stage = STAGES.TRANSITION_1_TO_SOLAR;
     this.stageTime = 0;
+    this.solarTime = 0;
     this.transitionProgress = 0;
+    this.trail = [];
 
     const targetStar = this.galacticScene.targetStar;
 
@@ -305,6 +320,7 @@ export class ContinuumDirector {
     if (this.transitionProgress >= 1.0) {
       this.stage = STAGES.STAGE_2_SOLAR;
       this.stageTime = 0;
+      this.solarTime = 0;
       this.trail = [];
 
       // Spawn probe in Solar frame with exact preserved entry angle and heading!
@@ -331,7 +347,8 @@ export class ContinuumDirector {
   // -------------------------------------------------------------
   updateSolarStage(dt) {
     const scene = this.solarScene;
-    const t = this.stageTime;
+    this.solarTime += dt;
+    const t = this.solarTime;
     const G = 1.0;
     const eps = 4.0;
 
@@ -451,9 +468,10 @@ export class ContinuumDirector {
     this.stage = STAGES.TRANSITION_2_TO_PLANETARY;
     this.stageTime = 0;
     this.transitionProgress = 0;
+    this.trail = [];
 
     const terra = this.solarScene.targetPlanet;
-    const terraPos = terra.getPositionAtTime(this.stageTime);
+    const terraPos = terra.getPositionAtTime(this.solarTime);
 
     // Compute exact arrival angle and velocity heading relative to Terra
     const relX = this.probe.pos.x - terraPos.x;
@@ -461,13 +479,14 @@ export class ContinuumDirector {
     const incomingAngle = Math.atan2(relY, relX);
 
     // Velocity relative to Terra's orbital motion
-    const terraVel = terra.getVelocityAtTime(this.stageTime);
+    const terraVel = terra.getVelocityAtTime(this.solarTime);
     const relVelX = this.probe.vel.x - terraVel.x;
     const relVelY = this.probe.vel.y - terraVel.y;
     const headingAngle = Math.atan2(relVelY, relVelX);
+    const relSpeed = Math.sqrt(relVelX * relVelX + relVelY * relVelY);
 
-    // Build Planetary Scene (normalized to 18.0 m/s planetary capture entry speed)
-    this.planetaryScene = buildPlanetaryScene(incomingAngle, headingAngle, 18.0);
+    // Build Planetary Scene (normalized to incoming transfer speed)
+    this.planetaryScene = buildPlanetaryScene(incomingAngle, headingAngle, relSpeed);
 
     // Camera stays firmly locked on Terra during transition
     this.camera.targetX = terraPos.x;
@@ -482,19 +501,21 @@ export class ContinuumDirector {
   updateTransition2(dt) {
     this.transitionProgress += dt / this.transitionDuration;
 
-    // Keep solar bodies advancing during transition
+    // Keep solar bodies advancing continuously during transition
+    this.solarTime += dt;
     for (const body of this.solarScene.bodies) {
-      body.evaluateAtTime(this.stageTime);
+      body.evaluateAtTime(this.solarTime);
     }
 
     const terra = this.solarScene.targetPlanet;
-    const terraPos = terra.getPositionAtTime(this.stageTime);
+    const terraPos = terra.getPositionAtTime(this.solarTime);
     this.camera.targetX = terraPos.x;
     this.camera.targetY = terraPos.y;
 
     if (this.transitionProgress >= 1.0) {
       this.stage = STAGES.STAGE_3_PLANETARY;
       this.stageTime = 0;
+      this.planetaryTime = 0;
       this.trail = [];
 
       // Spawn probe in Terra coordinate system with exact relative angles
@@ -521,7 +542,8 @@ export class ContinuumDirector {
   // -------------------------------------------------------------
   updatePlanetaryStage(dt) {
     const scene = this.planetaryScene;
-    const t = this.stageTime;
+    this.planetaryTime += dt;
+    const t = this.planetaryTime;
     const G = 1.0;
     const eps = 3.5;
 
@@ -634,13 +656,10 @@ export class ContinuumDirector {
         this.probe.activeTrim = null;
         scene.targetWaypoint.isCaptured = true;
         this.stage = STAGES.STAGE_4_COMPLETE;
-        this.stats.guidanceStatus = '★ DOCKED TO STATION ALPHA';
+        this.stats.guidanceStatus = '★ DOCKED TO STATION ALPHA // MISSION COMPLETE';
         this.stats.transitTimes.t3 = this.stageTime;
-        this.isPaused = true;
-
-        if (this.onMissionComplete) {
-          this.onMissionComplete(this.stats);
-        }
+        this.completeTimer = 0;
+        this.victoryModalTriggered = false;
         return;
       }
     }
@@ -651,6 +670,39 @@ export class ContinuumDirector {
     this.probe.heading = this.probe.vel.angle();
 
     this.recordTrail();
+  }
+
+  updateCompleteStage(dt) {
+    this.planetaryTime += dt;
+    const scene = this.planetaryScene;
+    if (!scene) return;
+
+    // Advance bodies and station
+    for (const body of scene.bodies) {
+      body.evaluateAtTime(this.planetaryTime);
+    }
+    scene.targetWaypoint.evaluateAtTime(this.planetaryTime);
+
+    // Keep probe clamped securely to station's docking ring
+    const wpPos = scene.targetWaypoint.getPositionAtTime(this.planetaryTime);
+    const wpVel = scene.targetWaypoint.getVelocityAtTime(this.planetaryTime);
+    this.probe.pos.copy(wpPos);
+    this.probe.vel.copy(wpVel);
+    this.probe.heading = wpVel.angle();
+
+    // Camera smoothly frames Terra and Station Alpha
+    this.camera.targetX = wpPos.x * 0.6;
+    this.camera.targetY = wpPos.y * 0.6;
+    this.camera.targetZoom = scene.targetZoom;
+
+    // Trigger debrief modal after short celebration delay
+    this.completeTimer = (this.completeTimer || 0) + dt;
+    if (this.completeTimer >= 1.0 && !this.victoryModalTriggered) {
+      this.victoryModalTriggered = true;
+      if (this.onMissionComplete) {
+        this.onMissionComplete(this.stats);
+      }
+    }
   }
 
   recordTrail() {

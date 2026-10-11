@@ -74,59 +74,91 @@ export class ContinuumDemoApp {
     // Dynamic grid
     this.drawBackgroundGrid(ctx, cam);
 
-    // Apply Camera Transform
-    ctx.save();
-    ctx.translate(w / 2, h / 2);
-    ctx.scale(cam.zoom, cam.zoom);
-    ctx.translate(-cam.x, -cam.y);
-
+    // Apply Camera Transform & Render active scenes
     const stage = this.director.stage;
 
-    // Render active celestial scene based on director stage
     if (stage === STAGES.STAGE_1_GALACTIC) {
+      ctx.save();
+      ctx.translate(w / 2, h / 2);
+      ctx.scale(cam.zoom, cam.zoom);
+      ctx.translate(-cam.x, -cam.y);
       this.renderGalacticScene(ctx, cam.zoom, 1.0);
+      this.renderProbe(ctx, cam.zoom);
+      ctx.restore();
     } else if (stage === STAGES.TRANSITION_1_TO_SOLAR) {
       const p = this.director.transitionProgress;
       const tStar = this.director.galacticScene.targetStar;
+      const tStarPos = tStar.position;
 
-      // 1. Galactic scene fades out, rendered at its native position
+      // 1. Galactic scene fades out, centered on Sol Prime at canvas center (w/2, h/2)
+      ctx.save();
+      ctx.translate(w / 2, h / 2);
+      ctx.scale(cam.zoom, cam.zoom);
+      ctx.translate(-tStarPos.x, -tStarPos.y);
       this.renderGalacticScene(ctx, cam.zoom, 1.0 - p);
+      ctx.restore();
 
-      // 2. Solar scene fades in, translated by tStar.position so Sol aligns seamlessly atop Sol Prime!
+      // 2. Solar scene fades in, centered on Sol (0, 0) at canvas center (w/2, h/2)
       if (this.director.solarScene) {
         ctx.save();
-        ctx.translate(tStar.position.x, tStar.position.y);
+        ctx.translate(w / 2, h / 2);
+        ctx.scale(cam.zoom, cam.zoom);
+        ctx.translate(0, 0);
         this.renderSolarScene(ctx, cam.zoom, p);
         ctx.restore();
       }
+
+      // 3. Probe rendered continuously relative to focal center (w/2, h/2)
+      this.renderProbeTransition1(ctx, w, h, cam.zoom, p);
+      this.renderTransitionBanner(ctx, w, h);
+
     } else if (stage === STAGES.STAGE_2_SOLAR) {
+      ctx.save();
+      ctx.translate(w / 2, h / 2);
+      ctx.scale(cam.zoom, cam.zoom);
+      ctx.translate(-cam.x, -cam.y);
       this.renderSolarScene(ctx, cam.zoom, 1.0);
+      this.renderProbe(ctx, cam.zoom);
+      ctx.restore();
+
     } else if (stage === STAGES.TRANSITION_2_TO_PLANETARY) {
       const p = this.director.transitionProgress;
-      const terraPos = this.director.solarScene.targetPlanet.getPositionAtTime(this.director.stageTime);
+      const terra = this.director.solarScene.targetPlanet;
+      const terraPos = terra.getPositionAtTime(this.director.solarTime);
 
-      // 1. Solar scene fades out, rendered at its native position
+      // 1. Solar scene fades out, centered on Terra at canvas center (w/2, h/2)
+      ctx.save();
+      ctx.translate(w / 2, h / 2);
+      ctx.scale(cam.zoom, cam.zoom);
+      ctx.translate(-terraPos.x, -terraPos.y);
       this.renderSolarScene(ctx, cam.zoom, 1.0 - p);
+      ctx.restore();
 
-      // 2. Planetary scene fades in, translated by terraPos so Terra aligns seamlessly atop Terra in Solar scene!
+      // 2. Planetary scene fades in, centered on Terra (0, 0) at canvas center (w/2, h/2)
       if (this.director.planetaryScene) {
         ctx.save();
-        ctx.translate(terraPos.x, terraPos.y);
+        ctx.translate(w / 2, h / 2);
+        ctx.scale(cam.zoom, cam.zoom);
+        ctx.translate(0, 0);
         this.renderPlanetaryScene(ctx, cam.zoom, p);
         ctx.restore();
       }
-    } else if (stage === STAGES.STAGE_3_PLANETARY || stage === STAGES.STAGE_4_COMPLETE) {
-      this.renderPlanetaryScene(ctx, cam.zoom, 1.0);
-    }
 
-    // Render Probe & Exhaust
-    this.renderProbe(ctx, cam.zoom);
-
-    ctx.restore();
-
-    // Render transition banner if in transition
-    if (stage === STAGES.TRANSITION_1_TO_SOLAR || stage === STAGES.TRANSITION_2_TO_PLANETARY) {
+      // 3. Probe rendered continuously relative to focal center (w/2, h/2)
+      this.renderProbeTransition2(ctx, w, h, cam.zoom, p);
       this.renderTransitionBanner(ctx, w, h);
+
+    } else if (stage === STAGES.STAGE_3_PLANETARY || stage === STAGES.STAGE_4_COMPLETE) {
+      ctx.save();
+      ctx.translate(w / 2, h / 2);
+      ctx.scale(cam.zoom, cam.zoom);
+      ctx.translate(-cam.x, -cam.y);
+      this.renderPlanetaryScene(ctx, cam.zoom, 1.0);
+      this.renderProbe(ctx, cam.zoom);
+      if (stage === STAGES.STAGE_4_COMPLETE) {
+        this.renderDockingBeacons(ctx, cam.zoom);
+      }
+      ctx.restore();
     }
   }
 
@@ -172,7 +204,7 @@ export class ContinuumDemoApp {
 
     ctx.save();
     ctx.globalAlpha = alpha;
-    const t = this.director.stageTime;
+    const t = this.director.solarTime;
 
     // Draw solar bodies & planetary orbits
     for (const body of scene.bodies) {
@@ -193,7 +225,7 @@ export class ContinuumDemoApp {
 
     ctx.save();
     ctx.globalAlpha = alpha;
-    const t = this.director.stageTime;
+    const t = this.director.planetaryTime;
 
     // Draw Terra & Luna
     for (const body of scene.bodies) {
@@ -217,26 +249,9 @@ export class ContinuumDemoApp {
   renderProbe(ctx, zoom) {
     const invZoom = 1 / Math.max(0.01, zoom);
     const probe = this.director.probe;
-    const stage = this.director.stage;
-
-    // Determine continuous probe position across coordinate transitions
-    let drawPos = probe.pos;
-    if (stage === STAGES.TRANSITION_1_TO_SOLAR && this.director.solarScene) {
-      const tStar = this.director.galacticScene.targetStar;
-      const relGalactic = Vector2.sub(probe.pos, tStar.position);
-      const p = this.director.transitionProgress;
-      const relProbe = Vector2.lerp(relGalactic, this.director.solarScene.probeStartPos, p);
-      drawPos = Vector2.add(tStar.position, relProbe);
-    } else if (stage === STAGES.TRANSITION_2_TO_PLANETARY && this.director.planetaryScene) {
-      const terraPos = this.director.solarScene.targetPlanet.getPositionAtTime(this.director.stageTime);
-      const relSolar = Vector2.sub(probe.pos, terraPos);
-      const p = this.director.transitionProgress;
-      const relProbe = Vector2.lerp(relSolar, this.director.planetaryScene.probeStartPos, p);
-      drawPos = Vector2.add(terraPos, relProbe);
-    }
 
     // Trail
-    if (this.director.trail.length > 1 && stage !== STAGES.TRANSITION_1_TO_SOLAR && stage !== STAGES.TRANSITION_2_TO_PLANETARY) {
+    if (this.director.trail.length > 1) {
       ctx.save();
       ctx.beginPath();
       ctx.moveTo(this.director.trail[0].x, this.director.trail[0].y);
@@ -260,14 +275,83 @@ export class ContinuumDemoApp {
       ctx.restore();
     }
 
-    // Probe Fuselage
+    // Probe Fuselage Hull
     ctx.save();
-    ctx.translate(drawPos.x, drawPos.y);
+    ctx.translate(probe.pos.x, probe.pos.y);
     ctx.rotate(probe.heading);
+    this.drawProbeShipHull(ctx, invZoom, probe.isDocked, probe.activeTrim);
+    ctx.restore();
+  }
 
+  renderProbeTransition1(ctx, w, h, zoom, p) {
+    const invZoom = 1 / Math.max(0.01, zoom);
+    const tStar = this.director.galacticScene.targetStar;
+    const probe = this.director.probe;
+
+    const relX = probe.pos.x - tStar.position.x;
+    const relY = probe.pos.y - tStar.position.y;
+    const incomingAngle = Math.atan2(relY, relX);
+
+    // Distance smoothly transitions from SOI radius (135) to Solar outer boundary (480)
+    const r = 135 * (1 - p) + 480 * p;
+    const screenX = w / 2 + Math.cos(incomingAngle) * r * zoom;
+    const screenY = h / 2 + Math.sin(incomingAngle) * r * zoom;
+
+    ctx.save();
+    ctx.translate(screenX, screenY);
+    ctx.rotate(probe.heading);
+    this.drawProbeShipHull(ctx, invZoom, false, 'MCC');
+    ctx.restore();
+  }
+
+  renderProbeTransition2(ctx, w, h, zoom, p) {
+    const invZoom = 1 / Math.max(0.01, zoom);
+    const terra = this.director.solarScene.targetPlanet;
+    const terraPos = terra.getPositionAtTime(this.director.solarTime);
+    const probe = this.director.probe;
+
+    const relX = probe.pos.x - terraPos.x;
+    const relY = probe.pos.y - terraPos.y;
+    const incomingAngle = Math.atan2(relY, relX);
+
+    // Distance smoothly transitions from Terra's SOI (65) to Planetary entry radius (140)
+    const r = 65 * (1 - p) + 140 * p;
+    const screenX = w / 2 + Math.cos(incomingAngle) * r * zoom;
+    const screenY = h / 2 + Math.sin(incomingAngle) * r * zoom;
+
+    ctx.save();
+    ctx.translate(screenX, screenY);
+    ctx.rotate(probe.heading);
+    this.drawProbeShipHull(ctx, invZoom, false, 'MCC');
+    ctx.restore();
+  }
+
+  renderDockingBeacons(ctx, zoom) {
+    const invZoom = 1 / Math.max(0.01, zoom);
+    const scene = this.director.planetaryScene;
+    if (!scene || !scene.targetWaypoint) return;
+
+    const wp = scene.targetWaypoint;
+    const t = this.director.planetaryTime;
+    const pulse = (Math.sin(t * 6.0) + 1) * 0.5;
+
+    ctx.save();
+    ctx.beginPath();
+    ctx.arc(wp.position.x, wp.position.y, (wp.captureRadius + pulse * 14) * invZoom, 0, Math.PI * 2);
+    ctx.strokeStyle = `rgba(52, 211, 153, ${0.4 + pulse * 0.4})`;
+    ctx.lineWidth = 2.0 * invZoom;
+    ctx.stroke();
+
+    ctx.font = `bold ${Math.max(10, Math.round(11 * invZoom))}px "JetBrains Mono", monospace`;
+    ctx.fillStyle = '#34d399';
+    ctx.textAlign = 'center';
+    ctx.fillText('★ CLAMPS LOCKED // DOCKED', wp.position.x, wp.position.y - wp.captureRadius - 14 * invZoom);
+    ctx.restore();
+  }
+
+  drawProbeShipHull(ctx, invZoom, isDocked, activeTrim) {
     // Active Thruster Jet Plume if Burning
-    if (probe.activeTrim === 'MCC') {
-      // High-intensity trailing ion plume (cyan)
+    if (activeTrim === 'MCC') {
       const plumeLen = 20 * invZoom + Math.random() * 10 * invZoom;
       ctx.beginPath();
       ctx.moveTo(-5 * invZoom, -3 * invZoom);
@@ -279,8 +363,7 @@ export class ContinuumDemoApp {
       ctx.shadowBlur = 10;
       ctx.fill();
       ctx.shadowBlur = 0;
-    } else if (probe.activeTrim === 'BRAKE') {
-      // High-intensity reverse side braking jets (amber/red)
+    } else if (activeTrim === 'BRAKE') {
       ctx.beginPath();
       ctx.moveTo(2 * invZoom, -4 * invZoom);
       ctx.lineTo(8 * invZoom + Math.random() * 8 * invZoom, -12 * invZoom);
@@ -305,13 +388,11 @@ export class ContinuumDemoApp {
     ctx.lineTo(-4 * invZoom, 0);
     ctx.lineTo(-7 * invZoom, 5 * invZoom);
     ctx.closePath();
-    ctx.fillStyle = probe.isDocked ? '#34d399' : '#f8fafc';
+    ctx.fillStyle = isDocked ? '#34d399' : '#f8fafc';
     ctx.fill();
     ctx.strokeStyle = '#38bdf8';
     ctx.lineWidth = 1.2 * invZoom;
     ctx.stroke();
-
-    ctx.restore();
   }
 
   renderTransitionBanner(ctx, w, h) {
@@ -407,10 +488,15 @@ export class ContinuumDemoApp {
     if (!modal) return;
     modal.classList.add('active');
 
-    document.getElementById('stat-transit-t1').innerText = `${stats.transitTimes.t1.toFixed(1)}s`;
-    document.getElementById('stat-transit-t2').innerText = `${stats.transitTimes.t2.toFixed(1)}s`;
-    document.getElementById('stat-transit-t3').innerText = `${stats.transitTimes.t3.toFixed(1)}s`;
-    document.getElementById('stat-total-time').innerText = `${this.director.totalTime.toFixed(1)}s`;
+    const t1El = document.getElementById('stat-transit-t1');
+    const t2El = document.getElementById('stat-transit-t2');
+    const t3El = document.getElementById('stat-transit-t3');
+    const totalEl = document.getElementById('stat-total-time');
+
+    if (t1El && stats?.transitTimes?.t1 !== undefined) t1El.innerText = `${stats.transitTimes.t1.toFixed(1)}s`;
+    if (t2El && stats?.transitTimes?.t2 !== undefined) t2El.innerText = `${stats.transitTimes.t2.toFixed(1)}s`;
+    if (t3El && stats?.transitTimes?.t3 !== undefined) t3El.innerText = `${stats.transitTimes.t3.toFixed(1)}s`;
+    if (totalEl) totalEl.innerText = `${this.director.totalTime.toFixed(1)}s`;
   }
 
   closeVictoryModal() {

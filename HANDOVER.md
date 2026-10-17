@@ -206,10 +206,75 @@ In this session, we proved out the multi-scale continuum pipeline (Tier 1 Galaxy
 
 ---
 
-## 8. Autonomous Execution & Server Launch Protocol (Operational Rule)
+## 8. Performance, Scaling & Language Migration Roadmap
+
+A comprehensive architectural analysis evaluating future scaling constraints of the current HTML5/JS prototype against **Rust**, **C/C++**, and **Python** has been integrated into **[SPEC.md §10](file:///c:/Users/jsh27/OneDrive/Documents/GitHub/Antigrav/Orbital%20Puzzle/SPEC.md#L196)**.
+
+### Key Conclusions:
+1. **Current JS Boundaries:** V8 garbage collection pauses, single-threaded locks during Monte Carlo trajectory sweeps (e.g. 25,000 candidate orbits), and CPU Canvas 2D rasterization limits for dense particle/asteroid fields.
+2. **Why Rust is the Target Architecture:**
+   - **Fearless Concurrency (`rayon`):** Parallelizing trajectory sweeps across all CPU cores with compile-time data race prevention.
+   - **First-Class Wasm + WebGPU (`wgpu` / `macroquad` / `bevy`):** Unified codebase deploying to native desktop binaries (Vulkan/DirectX 12) AND zero-install WebAssembly in browser.
+   - **Zero GC & Memory Determinism:** Complete frame-timing consistency.
+   - **Type-Level Dimensional Safety:** Newtypes for astronomical coordinates/units and typestates for spacecraft stages.
+3. **Phased Evolution Strategy:**
+   - **Phase 1 (Active):** Continue rapid gameplay & continuum mechanics iteration in JS/HTML5.
+   - **Phase 2 (Hybrid Acceleration):** Offload RK4 integration and trajectory prediction to a Rust Wasm module (`wasm-bindgen`).
+   - **Phase 3 (Production Engine):** Full native desktop and WebGPU port in Rust (Bevy or Macroquad).
+
+---
+
+## 9. Game Design Evolution & Mechanical Progression Models
+
+A comprehensive exploration of game design paradigms bridging authentic orbital simulation with compelling gameplay loops has been documented in **[SPEC.md §11](file:///c:/Users/jsh27/OneDrive/Documents/GitHub/Antigrav/Orbital%20Puzzle/SPEC.md#L256)**:
+
+### 9.1 Resolving the "Simulation vs. Exploration Friction"
+* **The Conflict:** In open-ended exploration/resource loops (*No Man's Sky*, *Elite*), manual celestial navigation quickly degenerates into repetitive errand friction when players must compute and wait for the same launch windows dozens of times.
+* **The Breakthrough Paradigm:** **"Record Once, Route Forever" & Infrastructure Taming Physics.** Players manually execute challenging "Proving Flights" (slingshots, launch windows, braking burns); once verified, routes convert into automated shipping lanes or are streamlined by mega-infrastructure.
+
+### 9.2 Four High-Level Concepts Detailed in SPEC.md:
+1. **The Celestial Logistics Tycoon (Riff 1):** Manual survey flights certified into automated periodic cargo lanes (*Factorio* / *Slipways* in space).
+2. **The Frontier Industrialist / Scale Ascension (Riff 2):** Starting as a lone chemical rocket pioneer, unlocking mega-engineering primitives to permanently tame physics at each tier:
+   - *Tier 3 (Planetary):* Orbital Skyhooks, Lunar Mass Drivers, Lagrange Propellant Depots.
+   - *Tier 2 (Interplanetary):* Aldrin Cyclers (perpetual-motion transit buses), Asteroid Nudge Redirects, Sol Laser Sail Arrays.
+   - *Tier 1 (Galactic):* Supermassive Black Hole (Sagittarius Prime) gravitational catapults, Pulsar slingshots, Interstellar Relay Gates.
+3. **The Orbital Rescue & Salvage Agency (Riff 3):** Tactical, high-urgency crisis missions with decaying orbits, tumbling derelicts, and salvage-funded tug upgrades.
+4. **Clockwork Transit & Orbital Timetable Dispatcher (Riff 4):** Synchronizing supply flows with deterministic planetary synodic alignment windows using orbital buffer depots.
+
+---
+
+## 10. Autonomous Execution & Server Launch Protocol (Operational Rule)
 
 > [!IMPORTANT]
 > **Always Launch & Link Dev Servers Automatically:**
 > - When creating, testing, or demonstrating code, prototypes, or demos, the AI assistant **must always automatically execute the command to launch the local development server** (`python serve.py [target]`) in the background as a daemon process.
 > - The assistant **must always present direct, clickable HTTP links** (e.g. `http://localhost:8000/continuum_demo.html` or `http://localhost:8000/`) so the user never has to manually start servers or switch terminal windows.
+
+---
+
+## 11. Tier 1 Galactic Sector & Multi-Scale Nebula Implementation
+
+### 11.1 Key Achievements:
+- **Default Clustered Disc Morphology with Continuous Full-Disk Distribution:**
+  - Transitioned the default sector morphology to the **Clustered Disc** model (`legacy`), while keeping the multi-arm spiral available as an alternative in the UI dropdown.
+  - Eliminated dense artificial cluster concentration: stars are distributed across a central core bulge ($15\%$) and a smooth, continuous $360^\circ$ galactic disk ($85\%$) spanning $R \in [260, 1800\text{ AU}]$.
+  - Rejection sampling ($d_{\text{min}} = 50\text{ AU}$) operates across the entire disk, eliminating star crowding and overlap while ensuring no empty, disconnected voids.
+  - Every star receives a catalog designation based on its galactic quadrant (`ORI`, `CYG`, `CAR`, `VEL`, `PER`, `CEN`, `AQU`, `SGR`) without requiring artificial spatial clumping.
+  - Sol Prime is deterministically anchored at index 1 at $R \approx 720\text{ AU}$, $\theta \approx 0.68\text{ rad}$.
+- **Natural Clustered Disc Nebula & Dust Architecture (`CLUSTERED_DISC_NEBULA`):**
+  - **Central Molecular Zone (CMZ Bulge Glow):** Warm amber, gold, and crimson ionized gas envelope surrounding the central supermassive black hole anchor.
+  - **Distributed Emission Nurseries:** 16 star-forming nebulae distributed smoothly across all quadrants and radial zones of the disk across 7 distinct spectral palettes (Orion Cyan, Carina Rose, Eagle Emerald, Cygnus Indigo, Tarantula Amber, Lagoon Lavender, Cobalt Blue). Additive `screen` compositing blends overlapping puffs into organic fractal cloud contours that rotate in Keplerian synchrony with galactic motion.
+  - **Curved Dark Silhouette Absorption Lanes:** 10 serpentine dust filaments and dark globules rendered via `source-over` compositing across $R = 250\text{--}1450\text{ AU}$, cutting dark silhouettes through background stars and emission glow.
+  - **Broad Diffuse Interstellar Medium (ISM) Disk Haze:** 24 soft, broad ambient puffs spanning the entire galactic plane, wrapping the galaxy in a unified, luminous cosmic atmosphere with zero empty voids.
+- **Square-Root Damped Apparent Sizing:**
+  - $\text{basePhysicalR} = \min(12.0, 2.2 + 1.35 \cdot \sqrt{R_{\text{star}}})$.
+  - Screen clamp ($1.1\text{--}2.0\text{px}$) keeps stars sharp and compact at macro zoom ($0.22\times$), while physical radius smoothly bounds stars at sector zoom ($0.75\text{--}1.5\times$), maintaining a comfortable $\sim 90\text{px}$ visual buffer between neighboring systems.
+- **Precision Navigation & Controls:**
+  - HUD zoom buttons (`[－]` and `[＋]`), mouse wheel, presets (`MACRO 22%`, `SECTOR 75%`), keyboard shortcuts (`+`, `-`, `C`).
+  - Dynamic star lock tracking with automatic centering compensation and visual tracking badge (`🎯 LOCKED: [NAME]`).
+  - Interactive Nebula toggle checkbox and live opacity slider.
+- **Automated Verification:**
+  - Comprehensive CDP test suite (`tests/test_galactic_demo_cdp.py`) verifies page initialization, 180 stars, disc and spiral morphology switching, nebula puff count, apparent size scaling, tracking lock, star population slider, zoom buttons/presets, and nebula toggle/opacity slider with zero console errors.
+
+
 

@@ -19,6 +19,16 @@ export function createRNG(seed = 1337) {
 }
 
 /**
+ * Samples a random number from a normal (Gaussian) distribution using Box-Muller transform.
+ */
+export function sampleGaussian(rng, mean = 0, stdDev = 1) {
+  const u1 = Math.max(1e-7, rng());
+  const u2 = rng();
+  const z0 = Math.sqrt(-2.0 * Math.log(u1)) * Math.cos(2.0 * Math.PI * u2);
+  return mean + z0 * stdDev;
+}
+
+/**
  * Returns normalized weights for the realistic astronomical distribution.
  */
 export function getAstronomicalDistribution() {
@@ -138,3 +148,22 @@ export function analyzePopulation(sampleList) {
     diversityScore
   };
 }
+
+/**
+ * Generates an on-demand, deterministic catalog designation for field stars (0 memory storage).
+ * e.g., "PERSEUS · TYC-58192" or "SGR-CORE · HIP-4819"
+ */
+export function getStarCatalogDesignation(star, seed = 1042) {
+  const hash = Math.abs(Math.sin((star.rDist || 100) * 43.17 + (star.initialAngle || 1) * 127.31 + seed * 0.001));
+  if (star.isCore) {
+    const num = Math.floor(hash * 8999) + 1000;
+    return `SGR-CORE // HIP-${num}`;
+  } else {
+    const armNames = ['PERSEUS', 'SCUTUM', 'NORMA', 'CYGNUS', 'CENTAURUS', 'SAGITTARIUS'];
+    const armIdx = Math.floor(hash * armNames.length);
+    const arm = armNames[armIdx];
+    const num = Math.floor(hash * 89999) + 10000;
+    return `${arm} // TYC-${num}`;
+  }
+}
+

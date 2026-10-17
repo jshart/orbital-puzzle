@@ -19,19 +19,26 @@ export class GalacticDemoApp {
     this.camera = {
       x: 0,
       y: 0,
-      zoom: 0.38,
+      zoom: 0.22,
       isDragging: false,
-      dragStart: { x: 0, y: 0 }
+      dragStart: { x: 0, y: 0 },
+      target: null // Locked tracking target
     };
 
     // State
     this.seed = 1042;
-    this.starCount = 65;
+    this.starCount = 180;
     this.blendFactor = 1.0; // Defaults to Game-Friendly
+    this.pattern = 'legacy'; // Defaults to Clustered Disc ('legacy')
+    this.armCount = 2; // 2, 3, or 4 arms
+    this.winding = 3.2; // Spiral winding factor
+    this.armScatter = 0.22; // Dispersion along arms
     this.showBinaryOrbits = true;
     this.showGravityWells = true;
     this.showLabels = true;
     this.showAllWells = false;
+    this.showNebula = true;
+    this.nebulaDensity = 1.0;
 
     this.simTime = 0;
     this.isPaused = false;
@@ -50,7 +57,11 @@ export class GalacticDemoApp {
     this.sector = new GalacticSector({
       seed: this.seed,
       starCount: this.starCount,
-      blendFactor: this.blendFactor
+      blendFactor: this.blendFactor,
+      pattern: this.pattern,
+      armCount: this.armCount,
+      winding: this.winding,
+      armScatter: this.armScatter
     });
 
     this.setupInputs();
@@ -58,6 +69,7 @@ export class GalacticDemoApp {
     window.addEventListener('resize', () => this.resizeCanvas());
 
     this.updateStatsUI();
+    this.updateZoomDisplay();
   }
 
   resizeCanvas() {
@@ -69,13 +81,40 @@ export class GalacticDemoApp {
     this.sector = new GalacticSector({
       seed: this.seed,
       starCount: this.starCount,
-      blendFactor: this.blendFactor
+      blendFactor: this.blendFactor,
+      pattern: this.pattern,
+      armCount: this.armCount,
+      winding: this.winding,
+      armScatter: this.armScatter
     });
+    if (this.sector.nebula) {
+      this.sector.nebula.opacity = this.nebulaDensity;
+    }
     this.hoveredStar = null;
     this.selectedStar = null;
     this.probe = null;
     this.probeTrail = [];
     this.updateStatsUI();
+  }
+
+  setPattern(pat) {
+    this.pattern = pat;
+    this.regenerateSector();
+  }
+
+  setArmCount(count) {
+    this.armCount = Math.max(1, Math.min(6, count));
+    this.regenerateSector();
+  }
+
+  setWinding(w) {
+    this.winding = Math.max(0.5, Math.min(6.0, w));
+    this.regenerateSector();
+  }
+
+  setArmScatter(scatter) {
+    this.armScatter = Math.max(0.05, Math.min(0.6, scatter));
+    this.regenerateSector();
   }
 
   setBlend(factor) {
@@ -84,8 +123,19 @@ export class GalacticDemoApp {
   }
 
   setStarCount(count) {
-    this.starCount = Math.max(20, Math.min(150, count));
+    this.starCount = Math.max(40, Math.min(600, count));
     this.regenerateSector();
+  }
+
+  setNebulaVisible(show) {
+    this.showNebula = show;
+  }
+
+  setNebulaDensity(density) {
+    this.nebulaDensity = Math.max(0, Math.min(1.5, density));
+    if (this.sector && this.sector.nebula) {
+      this.sector.nebula.opacity = this.nebulaDensity;
+    }
   }
 
   randomizeSeed() {
@@ -210,6 +260,11 @@ export class GalacticDemoApp {
         this.camera.isDragging = true;
         this.camera.dragStart.x = e.clientX;
         this.camera.dragStart.y = e.clientY;
+        // User manual drag releases focus-lock
+        if (this.camera.target) {
+          this.camera.target = null;
+          this.updateTrackingUI();
+        }
       }
     });
 
@@ -223,7 +278,7 @@ export class GalacticDemoApp {
         this.camera.dragStart.y = e.clientY;
       } else {
         const worldPos = this.screenToWorld({ x: e.clientX, y: e.clientY });
-        const hit = this.sector.findNearestStar(worldPos, 45 / this.camera.zoom);
+        const hit = this.sector.findNearestStar(worldPos, 40 / this.camera.zoom);
         this.hoveredStar = hit;
       }
     });
@@ -234,16 +289,30 @@ export class GalacticDemoApp {
 
     c.addEventListener('click', (e) => {
       const worldPos = this.screenToWorld({ x: e.clientX, y: e.clientY });
-      const hit = this.sector.findNearestStar(worldPos, 45 / this.camera.zoom);
+      const hit = this.sector.findNearestStar(worldPos, 40 / this.camera.zoom);
       if (hit) {
         this.selectStar(hit);
+        this.camera.target = hit; // Lock camera focus to target
+        this.updateTrackingUI();
+      }
+    });
+
+    c.addEventListener('dblclick', (e) => {
+      const worldPos = this.screenToWorld({ x: e.clientX, y: e.clientY });
+      const hit = this.sector.findNearestStar(worldPos, 40 / this.camera.zoom);
+      if (hit) {
+        this.selectStar(hit);
+        this.camera.target = hit;
+        this.camera.zoom = Math.max(1.1, this.camera.zoom * 1.8);
+        this.updateZoomDisplay();
+        this.updateTrackingUI();
       }
     });
 
     c.addEventListener('wheel', (e) => {
       e.preventDefault();
       const zoomFactor = e.deltaY < 0 ? 1.12 : 0.89;
-      this.camera.zoom = Math.max(0.12, Math.min(2.5, this.camera.zoom * zoomFactor));
+      this.camera.zoom = Math.max(0.08, Math.min(2.5, this.camera.zoom * zoomFactor));
       this.updateZoomDisplay();
     }, { passive: false });
   }
@@ -262,6 +331,33 @@ export class GalacticDemoApp {
     if (el) el.innerText = `${Math.round(this.camera.zoom * 100)}%`;
   }
 
+  zoomIn(factor = 1.15) {
+    this.camera.zoom = Math.min(2.5, this.camera.zoom * factor);
+    this.updateZoomDisplay();
+  }
+
+  zoomOut(factor = 1.15) {
+    this.camera.zoom = Math.max(0.08, this.camera.zoom / factor);
+    this.updateZoomDisplay();
+  }
+
+  setZoom(val) {
+    this.camera.zoom = Math.max(0.08, Math.min(2.5, val));
+    this.updateZoomDisplay();
+  }
+
+  updateTrackingUI() {
+    const badge = document.getElementById('tracking-badge');
+    const nameEl = document.getElementById('tracking-name');
+    if (!badge) return;
+    if (this.camera.target) {
+      badge.style.display = 'inline-flex';
+      if (nameEl) nameEl.innerText = this.camera.target.name || 'STAR';
+    } else {
+      badge.style.display = 'none';
+    }
+  }
+
   // -------------------------------------------------------------
   // SIMULATION & RENDER LOOP
   // -------------------------------------------------------------
@@ -271,6 +367,14 @@ export class GalacticDemoApp {
       this.sector.evaluateAtTime(this.simTime);
       this.renderer.update(dt * this.timeScale);
       this.updateProbe(dt * this.timeScale);
+    }
+
+    // Camera Focus Tracking (smoothly anchors viewport to rotating star)
+    if (this.camera.target) {
+      const tPos = this.camera.target.position;
+      const lerpFactor = Math.min(1.0, dt * 10);
+      this.camera.x += (tPos.x - this.camera.x) * lerpFactor;
+      this.camera.y += (tPos.y - this.camera.y) * lerpFactor;
     }
   }
 
@@ -292,15 +396,26 @@ export class GalacticDemoApp {
     ctx.scale(this.camera.zoom, this.camera.zoom);
     ctx.translate(-this.camera.x, -this.camera.y);
 
+    const halfW = (w / 2) / Math.max(0.01, this.camera.zoom);
+    const halfH = (h / 2) / Math.max(0.01, this.camera.zoom);
+    const viewport = {
+      minX: this.camera.x - halfW,
+      maxX: this.camera.x + halfW,
+      minY: this.camera.y - halfH,
+      maxY: this.camera.y + halfH
+    };
+
     // Draw Sector Stars & Barycenters
     this.renderer.drawSector(ctx, this.sector, this.simTime, {
       zoom: this.camera.zoom,
+      viewport,
       hoveredStar: this.hoveredStar,
       selectedStar: this.selectedStar,
       showBinaryOrbits: this.showBinaryOrbits,
       showGravityWells: this.showGravityWells,
       showLabels: this.showLabels,
-      showAllWells: this.showAllWells
+      showAllWells: this.showAllWells,
+      showNebula: this.showNebula
     });
 
     // Draw Probe & Trail
@@ -376,7 +491,9 @@ export class GalacticDemoApp {
 
     // Update Star Count Badge
     const countEl = document.getElementById('stat-count');
-    if (countEl) countEl.innerText = `${this.sector.stars.length} Bodies (${this.sector.barycenters.length} Binaries)`;
+    if (countEl) {
+      countEl.innerText = `${this.sector.stars.length} Stars (${this.sector.barycenters.length} Binaries)`;
+    }
 
     // Update Distribution Breakdown Table
     const tbody = document.getElementById('distro-table-body');
@@ -428,7 +545,7 @@ export class GalacticDemoApp {
     document.getElementById('card-star-temp').innerText = meta.temperatureK > 0 ? `${meta.temperatureK.toLocaleString()} K` : 'N/A (Horizon)';
     document.getElementById('card-star-mass').innerText = `${meta.solarMasses} M☉ (Game M: ${star.mass.toLocaleString()})`;
     document.getElementById('card-star-radius').innerText = `${star.radius} AU`;
-    document.getElementById('card-star-type').innerText = star.isBinary ? `Binary Pair (${star.isPrimary ? 'Primary' : 'Companion'})` : 'Solitary Star';
+    document.getElementById('card-star-type').innerText = star.isBinary ? `Binary Pair (${star.isPrimary ? 'Primary' : 'Companion'})` : (star.isCoreAnchor ? 'Supermassive Core Anchor' : 'Solitary Star');
     document.getElementById('card-star-desc').innerText = meta.description;
     document.getElementById('card-star-mechanic').innerText = meta.gameplayMechanics;
   }

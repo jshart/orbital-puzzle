@@ -99,6 +99,13 @@
       <div style="display: flex; align-items: center; gap: 12px;">
         <span id="stat-count" style="font-size: 0.75rem; color: #38bdf8; font-family: monospace;">65 Bodies</span>
         <span style="font-size: 0.75rem; color: #94a3b8; font-family: monospace;">Diversity Entropy: <strong id="stat-diversity" style="color: #34d399;">84.2%</strong></span>
+        
+        <!-- Focus Tracking Badge -->
+        <span id="tracking-badge" style="display: none; align-items: center; gap: 6px; padding: 2px 8px; border-radius: 4px; background: rgba(56, 189, 248, 0.15); border: 1px solid rgba(56, 189, 248, 0.4); font-size: 0.72rem; color: #38bdf8; font-family: monospace;">
+          🎯 LOCKED: <strong id="tracking-name">SOL PRIME</strong>
+          <button id="btn-release-tracking" title="Unlock Camera (Free-Roam)" style="background: none; border: none; color: #f87171; cursor: pointer; font-size: 0.8rem; padding: 0 2px; font-weight: bold;">✕</button>
+        </span>
+
         <a href="continuum_demo.html" class="back-btn" style="border-color: rgba(56, 189, 248, 0.5); color: #38bdf8;" title="Cosmic Continuum Multi-Scale Demo">🌌 COSMIC JOURNEY</a>
         <a href="index.html" class="back-btn" title="Return to Main Game">◀ MAIN GAME</a>
       </div>
@@ -134,12 +141,46 @@
             </div>
           </div>
 
-          <!-- Star Count Slider -->
-          <div class="data-row" style="margin-bottom: 6px;">
-            <span class="data-label">Star Density:</span>
-            <span class="data-value" id="label-star-count">65 Stars</span>
+          <!-- Galaxy Morphology Box -->
+          <div class="blend-slider-box" style="border-color: rgba(192, 132, 252, 0.4); margin-bottom: 10px;">
+            <div class="data-row" style="margin-bottom: 6px;">
+              <span class="data-label" style="font-weight: bold; color: #c084fc;">Galaxy Pattern:</span>
+              <select id="select-pattern" style="background: rgba(15,23,42,0.9); color: #38bdf8; border: 1px solid rgba(56,189,248,0.5); border-radius: 4px; padding: 2px 6px; font-size: 0.72rem; outline: none;">
+                <option value="legacy" selected>Clustered Disc (Default)</option>
+                <option value="spiral">Spiral Galaxy (Multi-Armed)</option>
+              </select>
+            </div>
+
+            <div id="spiral-controls-container" style="display: none;">
+              <!-- Arm Count -->
+              <div class="data-row" style="margin-bottom: 4px;">
+                <span class="data-label">Spiral Arms:</span>
+                <span class="data-value" id="label-arms" style="color: #c084fc;">2 Major Arms</span>
+              </div>
+              <input type="range" id="input-arms" min="1" max="5" step="1" value="2" style="width: 100%; margin-bottom: 8px;">
+
+              <!-- Arm Winding -->
+              <div class="data-row" style="margin-bottom: 4px;">
+                <span class="data-label">Spiral Winding:</span>
+                <span class="data-value" id="label-winding" style="color: #38bdf8;">3.2 rad</span>
+              </div>
+              <input type="range" id="input-winding" min="1.5" max="5.0" step="0.1" value="3.2" style="width: 100%; margin-bottom: 8px;">
+
+              <!-- Arm Dispersion -->
+              <div class="data-row" style="margin-bottom: 4px;">
+                <span class="data-label">Arm Scatter (Width):</span>
+                <span class="data-value" id="label-scatter" style="color: #38bdf8;">0.22</span>
+              </div>
+              <input type="range" id="input-scatter" min="0.08" max="0.45" step="0.02" value="0.22" style="width: 100%;">
+            </div>
           </div>
-          <input type="range" id="input-star-count" min="25" max="110" step="5" value="65" style="width: 100%; margin-bottom: 10px;">
+
+          <!-- Galaxy Star Population Slider -->
+          <div class="data-row" style="margin-bottom: 6px;">
+            <span class="data-label">Galaxy Star Population:</span>
+            <span class="data-value" id="label-star-count" style="color: #38bdf8;">180 Stars</span>
+          </div>
+          <input type="range" id="input-star-count" min="50" max="450" step="10" value="180" style="width: 100%; margin-bottom: 10px;">
 
           <!-- Seed Controls -->
           <div style="display: flex; gap: 6px; margin-bottom: 12px;">
@@ -155,6 +196,18 @@
 
           <!-- Visual Toggles -->
           <label class="toggle-group">
+            <input type="checkbox" id="toggle-nebula" checked>
+            <span style="color: #c084fc;">Interstellar Nebula & Dust</span>
+          </label>
+          <div id="nebula-slider-container" style="margin-top: 4px; padding-left: 20px; margin-bottom: 6px;">
+            <div class="data-row" style="margin-bottom: 2px;">
+              <span class="data-label" style="font-size: 0.65rem;">Nebula Opacity:</span>
+              <span class="data-value" id="label-nebula-density" style="color: #c084fc; font-size: 0.65rem;">100%</span>
+            </div>
+            <input type="range" id="input-nebula-density" min="0.2" max="1.5" step="0.05" value="1.0" style="width: 100%;">
+          </div>
+
+          <label class="toggle-group" style="margin-top: 6px;">
             <input type="checkbox" id="toggle-binary-tracks" checked>
             <span>Binary Barycenter Tracks</span>
           </label>
@@ -230,15 +283,25 @@
     <!-- Bottom Controls -->
     <footer class="bottom-console interactive">
       <div style="font-size: 0.75rem; color: #94a3b8; display: flex; align-items: center; gap: 14px;">
-        <span>🖱 <strong>Left-Click & Drag:</strong> Pan Galactic Map</span>
-        <span>🔍 <strong>Scroll Wheel:</strong> Zoom In / Out</span>
-        <span>⭐ <strong>Left-Click Star:</strong> Inspect Astrodynamics & Physics</span>
+        <span>🖱 <strong>Drag:</strong> Pan Map</span>
+        <span>🔍 <strong>[＋]/[－] Buttons, Scroll or [+/-]:</strong> Zoom</span>
+        <span>⭐ <strong>Click Star:</strong> Lock Focus</span>
+        <span>⚡ <strong>Dbl-Click:</strong> Zoom In</span>
       </div>
 
-      <!-- Precision Zoom Cluster -->
+      <!-- Precision Zoom & Preset Cluster -->
       <div class="cam-cluster" style="margin-left: auto;">
-        <span class="zoom-display" id="label-zoom" title="Current Zoom Level">38%</span>
-        <button class="reset-btn" id="btn-recenter" title="Recenter Camera View" style="padding: 4px 8px; font-size: 0.7rem;">CENTER</button>
+        <button class="step-btn" id="btn-zoom-out" title="Precision Zoom Out [－ / -]">－</button>
+        <span class="zoom-display" id="label-zoom" title="Current Zoom Level">22%</span>
+        <button class="step-btn" id="btn-zoom-in" title="Precision Zoom In [＋ / +]">＋</button>
+        <button class="reset-btn" id="btn-recenter" title="Recenter Camera View [C]" style="padding: 4px 8px; font-size: 0.7rem;">CENTER</button>
+
+        <!-- Quick Zoom Presets -->
+        <div style="display: flex; gap: 4px; margin-left: 6px; border-left: 1px solid rgba(255,255,255,0.15); padding-left: 6px;">
+          <button class="time-btn" id="btn-preset-macro" title="Macro Galaxy View [1]" style="padding: 2px 7px; font-size: 0.68rem;">GALAXY</button>
+          <button class="time-btn" id="btn-preset-sector" title="Sector Cluster View [2]" style="padding: 2px 7px; font-size: 0.68rem;">SECTOR</button>
+          <button class="time-btn" id="btn-preset-system" title="Close System View [3]" style="padding: 2px 7px; font-size: 0.68rem;">SYSTEM</button>
+        </div>
       </div>
     </footer>
   </div>
@@ -249,6 +312,7 @@
 
     const canvas = document.getElementById('galactic-canvas');
     const app = new GalacticDemoApp(canvas);
+    window.app = app;
     window.galacticApp = app;
 
     // Blend Slider
@@ -260,6 +324,39 @@
       else if (val === 1) labelBlend.innerText = '100% Game-Friendly';
       else labelBlend.innerText = `${Math.round(val * 100)}% Hybrid Blend`;
       app.setBlend(val);
+    });
+
+    // Morphology & Spiral Pattern
+    const selectPattern = document.getElementById('select-pattern');
+    const spiralContainer = document.getElementById('spiral-controls-container');
+    selectPattern.addEventListener('change', (e) => {
+      const pat = e.target.value;
+      spiralContainer.style.display = pat === 'spiral' ? 'block' : 'none';
+      app.setPattern(pat);
+    });
+
+    const inputArms = document.getElementById('input-arms');
+    const labelArms = document.getElementById('label-arms');
+    inputArms.addEventListener('input', (e) => {
+      const val = parseInt(e.target.value);
+      labelArms.innerText = `${val} ${val === 1 ? 'Arm' : 'Arms'}`;
+      app.setArmCount(val);
+    });
+
+    const inputWinding = document.getElementById('input-winding');
+    const labelWinding = document.getElementById('label-winding');
+    inputWinding.addEventListener('input', (e) => {
+      const val = parseFloat(e.target.value);
+      labelWinding.innerText = `${val.toFixed(1)} rad`;
+      app.setWinding(val);
+    });
+
+    const inputScatter = document.getElementById('input-scatter');
+    const labelScatter = document.getElementById('label-scatter');
+    inputScatter.addEventListener('input', (e) => {
+      const val = parseFloat(e.target.value);
+      labelScatter.innerText = `${val.toFixed(2)}`;
+      app.setArmScatter(val);
     });
 
     // Star Count Slider
@@ -278,13 +375,100 @@
 
     // Recenter
     const recenter = () => {
+      app.camera.target = null;
       app.camera.x = 0;
       app.camera.y = 0;
-      app.camera.zoom = 0.38;
+      app.camera.zoom = 0.22;
       app.updateZoomDisplay();
+      app.updateTrackingUI();
     };
     document.getElementById('btn-recenter').addEventListener('click', recenter);
     document.getElementById('btn-recenter-cam').addEventListener('click', recenter);
+
+    // Precision Zoom Buttons with Continuous Hold Auto-Repeat
+    const btnZoomIn = document.getElementById('btn-zoom-in');
+    const btnZoomOut = document.getElementById('btn-zoom-out');
+
+    function attachZoomRepeater(btn, isZoomIn) {
+      if (!btn) return;
+      let timeoutId = null;
+      let intervalId = null;
+
+      const zoomAction = () => {
+        if (isZoomIn) {
+          app.zoomIn(1.08);
+        } else {
+          app.zoomOut(1.08);
+        }
+      };
+
+      const start = (e) => {
+        e.preventDefault();
+        zoomAction();
+        timeoutId = setTimeout(() => {
+          intervalId = setInterval(zoomAction, 45);
+        }, 220);
+      };
+
+      const stop = () => {
+        if (timeoutId) clearTimeout(timeoutId);
+        if (intervalId) clearInterval(intervalId);
+        timeoutId = null;
+        intervalId = null;
+      };
+
+      btn.addEventListener('mousedown', start);
+      btn.addEventListener('mouseup', stop);
+      btn.addEventListener('mouseleave', stop);
+      btn.addEventListener('touchstart', start, { passive: false });
+      btn.addEventListener('touchend', stop);
+    }
+
+    attachZoomRepeater(btnZoomIn, true);
+    attachZoomRepeater(btnZoomOut, false);
+
+    // Preset Zoom Jumps
+    const btnPresetMacro = document.getElementById('btn-preset-macro');
+    if (btnPresetMacro) {
+      btnPresetMacro.addEventListener('click', () => app.setZoom(0.22));
+    }
+    const btnPresetSector = document.getElementById('btn-preset-sector');
+    if (btnPresetSector) {
+      btnPresetSector.addEventListener('click', () => app.setZoom(0.75));
+    }
+    const btnPresetSystem = document.getElementById('btn-preset-system');
+    if (btnPresetSystem) {
+      btnPresetSystem.addEventListener('click', () => app.setZoom(1.60));
+    }
+
+    // Release tracking button
+    const btnRelease = document.getElementById('btn-release-tracking');
+    if (btnRelease) {
+      btnRelease.addEventListener('click', () => {
+        app.camera.target = null;
+        app.updateTrackingUI();
+      });
+    }
+
+    // Keyboard shortcuts for navigation
+    window.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') {
+        app.camera.target = null;
+        app.updateTrackingUI();
+      } else if (e.key === 'c' || e.key === 'C') {
+        recenter();
+      } else if (e.key === '+' || e.key === '=' || e.code === 'NumpadAdd') {
+        app.zoomIn(1.15);
+      } else if (e.key === '-' || e.key === '_' || e.code === 'NumpadSubtract') {
+        app.zoomOut(1.15);
+      } else if (e.key === '1') {
+        app.setZoom(0.22);
+      } else if (e.key === '2') {
+        app.setZoom(0.75);
+      } else if (e.key === '3') {
+        app.setZoom(1.60);
+      }
+    });
 
     // Launch Test Probe
     document.getElementById('btn-launch-probe').addEventListener('click', () => {
@@ -292,6 +476,26 @@
     });
 
     // Toggles
+    const toggleNebula = document.getElementById('toggle-nebula');
+    const nebulaContainer = document.getElementById('nebula-slider-container');
+    const inputNebulaDensity = document.getElementById('input-nebula-density');
+    const labelNebulaDensity = document.getElementById('label-nebula-density');
+
+    if (toggleNebula) {
+      toggleNebula.addEventListener('change', (e) => {
+        app.setNebulaVisible(e.target.checked);
+        if (nebulaContainer) nebulaContainer.style.display = e.target.checked ? 'block' : 'none';
+      });
+    }
+
+    if (inputNebulaDensity) {
+      inputNebulaDensity.addEventListener('input', (e) => {
+        const val = parseFloat(e.target.value);
+        if (labelNebulaDensity) labelNebulaDensity.innerText = `${Math.round(val * 100)}%`;
+        app.setNebulaDensity(val);
+      });
+    }
+
     document.getElementById('toggle-binary-tracks').addEventListener('change', (e) => {
       app.showBinaryOrbits = e.target.checked;
     });
